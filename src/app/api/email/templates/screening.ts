@@ -6,7 +6,6 @@ export function generateScreeningTemplate(recipient: EmailData): string {
   const position = isCompanyTemplateConfigured() ? env.COMPANY_POSITION! : 'Software Engineer Intern';
   const senderName = env.SENDER_NAME || 'The Hiring Team';
   const senderTitle = isCompanyTemplateConfigured() ? env.SENDER_TITLE! : 'Hiring Manager';
-  const senderDepartment = isCompanyTemplateConfigured() ? env.SENDER_DEPARTMENT! : 'Human Resources';
 
   return `
     <!DOCTYPE html>

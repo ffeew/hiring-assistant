@@ -36,6 +36,7 @@ export default async function authMiddleware(request: NextRequest) {
 
     return NextResponse.next();
   } catch (error) {
+    console.error("Error checking session:", error);
     // If there's an error checking session, redirect to login
     return NextResponse.redirect(new URL("/login", request.url));
   }

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { authClient } from "@/app/utils/auth-client";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 export function LoginForm() {
 	const [email, setEmail] = useState("");
@@ -29,6 +30,7 @@ export function LoginForm() {
 				router.refresh();
 			}
 		} catch (err) {
+			console.error("Login error:", err);
 			setError("An unexpected error occurred");
 		} finally {
 			setIsLoading(false);
@@ -94,11 +96,11 @@ export function LoginForm() {
 			</form>
 
 			<div className="mt-4 text-center">
-				<span className="text-sm text-muted-foreground">
-					Don't have an account?{" "}
-					<a href="/signup" className="text-primary hover:underline">
+				<span className="flex gap-1 text-sm text-muted-foreground w-full justify-center items-center">
+					Don&apos;t have an account?
+					<Link href="/signup" className="text-primary hover:underline">
 						Sign up
-					</a>
+					</Link>
 				</span>
 			</div>
 		</div>

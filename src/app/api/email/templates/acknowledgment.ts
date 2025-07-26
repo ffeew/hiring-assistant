@@ -70,7 +70,8 @@ export function generateAcknowledgmentTemplate(recipient: EmailData): string {
         <p>We appreciate the time you took to apply and look forward to potentially working together.</p>
         
         <p>Best regards,<br>
-        <strong>${senderName}</strong></p>
+        <strong>${senderName}</strong><br>
+        ${companyName}</p>
       </div>
       <div class="footer">
         <p>This is an automated message. Please do not reply to this email.</p>

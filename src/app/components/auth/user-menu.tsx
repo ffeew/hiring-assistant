@@ -3,6 +3,7 @@
 import { authClient } from "@/app/utils/auth-client";
 import { useRouter } from "next/navigation";
 import type { User } from "better-auth/types";
+import Image from "next/image";
 
 interface UserMenuProps {
 	user: User;
@@ -21,9 +22,11 @@ export function UserMenu({ user }: UserMenuProps) {
 		<div className="relative group">
 			<button className="flex items-center space-x-2 text-sm bg-secondary hover:bg-secondary/80 px-3 py-2 rounded-md transition-colors">
 				{user.image ? (
-					<img
+					<Image
 						src={user.image}
 						alt={user.name}
+						width={24}
+						height={24}
 						className="w-6 h-6 rounded-full"
 					/>
 				) : (
