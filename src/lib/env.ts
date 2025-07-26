@@ -21,7 +21,7 @@ const envSchema = z.object({
 
   // Better Auth Configuration
   BETTER_AUTH_SECRET: z.string().min(32, 'BETTER_AUTH_SECRET must be at least 32 characters long'),
-  BETTER_AUTH_URL: z.string().url('BETTER_AUTH_URL must be a valid URL'),
+  NEXT_PUBLIC_BETTER_AUTH_URL: z.string().url('NEXT_PUBLIC_BETTER_AUTH_URL must be a valid URL'),
 
   // Optional: Turso specific URLs (if you're using Turso as your database)
   TURSO_DATABASE_URL: z.string().url('TURSO_DATABASE_URL must be a valid URL').optional(),
@@ -114,7 +114,7 @@ export const getEnvironmentStatus = () => {
     email: isEmailConfigured(),
     companyTemplate: isCompanyTemplateConfigured(),
     database: isDatabaseConfigured(),
-    auth: !!(env.BETTER_AUTH_SECRET && env.BETTER_AUTH_URL),
+    auth: !!(env.BETTER_AUTH_SECRET && env.NEXT_PUBLIC_BETTER_AUTH_URL),
     nodeEnv: env.NODE_ENV,
   };
 };

@@ -1,7 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { EmailService, EmailData, EmailTemplate } from '../email.service';
+import { auth } from '@/lib/auth';
+import { headers } from 'next/headers';
 
 export async function POST(request: NextRequest) {
+
+  const session = await auth.api.getSession({
+    headers: await headers()
+  });
+
+  if (!session) {
+    return NextResponse.json(
+      { error: "Unauthorized" },
+      { status: 401 }
+    );
+  }
+
   try {
     const { recipients } = await request.json();
 

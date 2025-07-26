@@ -1,10 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
 import { extractContactInfoFromResume } from "./extract.service";
+import { headers } from "next/headers";
+import { auth } from "@/lib/auth";
 
 
 
 
 export async function POST(request: NextRequest) {
+
+  const session = await auth.api.getSession({
+    headers: await headers()
+  });
+
+  if (!session) {
+    return NextResponse.json(
+      { error: "Unauthorized" },
+      { status: 401 }
+    );
+  }
+
   try {
     const formData = await request.formData();
     const files = formData.getAll("files") as File[];
