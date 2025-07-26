@@ -69,7 +69,7 @@ export function generateScreeningTemplate(recipient: EmailData): string {
       <div class="content">
         <p>Dear ${recipient.firstName},</p>
         
-        <p>Thank you for your interest in the <strong>${position} at ${companyName}</strong>. We're excited to learn more about your background and interest in joining our team.</p>
+        <p>Thank you for your interest in the <strong>${position} position at ${companyName}</strong>. We're excited to learn more about your background and interest in joining our team.</p>
         
         <p>Before we proceed with the next steps, we'd like to confirm a few important details and ask some initial screening questions:</p>
         
