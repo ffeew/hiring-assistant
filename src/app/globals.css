@@ -1,26 +1,136 @@
 @import "tailwindcss";
 
+@theme {
+	/* Typography */
+	--font-family-sans: Inter, system-ui, sans-serif;
+	--font-family-mono: "Geist Mono", Consolas, monospace;
+
+	/* Colors - Light theme */
+	--color-background: #ffffff;
+	--color-foreground: #171717;
+	--color-card: #ffffff;
+	--color-card-foreground: #171717;
+	--color-muted: #f8fafc;
+	--color-muted-foreground: #64748b;
+	--color-border: #e2e8f0;
+	--color-primary: #7c3aed;
+	--color-primary-hover: #6d28d9;
+	--color-secondary: #10b981;
+	--color-secondary-hover: #059669;
+}
+
+/* Legacy CSS variables for backward compatibility */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+	--background: var(--color-background);
+	--foreground: var(--color-foreground);
+	--card-background: var(--color-card);
+	--card-foreground: var(--color-card-foreground);
+	--muted-background: var(--color-muted);
+	--muted-foreground: var(--color-muted-foreground);
+	--border: var(--color-border);
+	--primary: var(--color-primary);
+	--primary-hover: var(--color-primary-hover);
+	--secondary: var(--color-secondary);
+	--secondary-hover: var(--color-secondary-hover);
+	--muted: var(--color-muted);
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+/* Dark theme color overrides */
+[data-theme="dark"] {
+	--color-background: #0a0a0a;
+	--color-foreground: #ededed;
+	--color-card: #1a1a1a;
+	--color-card-foreground: #ededed;
+	--color-muted: #262626;
+	--color-muted-foreground: #a3a3a3;
+	--color-border: #404040;
+	--color-primary: #8b5cf6;
+	--color-primary-hover: #a78bfa;
+	--color-secondary: #10b981;
+	--color-secondary-hover: #34d399;
 }
 
+/* System theme preference */
 @media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+	:root:not([data-theme]) {
+		--color-background: #0a0a0a;
+		--color-foreground: #ededed;
+		--color-card: #1a1a1a;
+		--color-card-foreground: #ededed;
+		--color-muted: #262626;
+		--color-muted-foreground: #a3a3a3;
+		--color-border: #404040;
+		--color-primary: #8b5cf6;
+		--color-primary-hover: #a78bfa;
+		--color-secondary: #10b981;
+		--color-secondary-hover: #34d399;
+	}
+}
+
+/* Custom Tailwind utilities */
+@layer utilities {
+	.bg-background {
+		background-color: var(--background);
+	}
+	.bg-foreground {
+		background-color: var(--foreground);
+	}
+	.bg-card {
+		background-color: var(--card-background);
+	}
+	.bg-muted {
+		background-color: var(--muted-background);
+	}
+	.bg-primary {
+		background-color: var(--primary);
+	}
+	.bg-secondary {
+		background-color: var(--secondary);
+	}
+
+	.text-background {
+		color: var(--background);
+	}
+	.text-foreground {
+		color: var(--foreground);
+	}
+	.text-card-foreground {
+		color: var(--card-foreground);
+	}
+	.text-muted-foreground {
+		color: var(--muted-foreground);
+	}
+	.text-primary {
+		color: var(--primary);
+	}
+	.text-secondary {
+		color: var(--secondary);
+	}
+
+	.border-border {
+		border-color: var(--border);
+	}
+	.border-muted {
+		border-color: var(--muted-background);
+	}
+	.border-primary {
+		border-color: var(--primary);
+	}
+
+	.hover\:bg-primary-hover:hover {
+		background-color: var(--primary-hover);
+	}
+	.hover\:bg-secondary-hover:hover {
+		background-color: var(--secondary-hover);
+	}
+	.hover\:bg-muted-hover:hover {
+		background-color: var(--muted-background);
+	}
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+	background: var(--background);
+	color: var(--foreground);
+	font-family: var(--font-family-sans);
+	transition: background-color 0.3s ease, color 0.3s ease;
 }
