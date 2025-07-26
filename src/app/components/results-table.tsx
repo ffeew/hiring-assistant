@@ -194,7 +194,7 @@ export function ResultsTable({
 								</td>
 								<td className="px-6 py-4 whitespace-nowrap text-sm">
 									<select
-										value={data.template || EmailTemplate.ACKNOWLEDGMENT}
+										value={data.template || EmailTemplate.SCREENING}
 										onChange={(e) =>
 											handleTemplateChange(
 												index,
