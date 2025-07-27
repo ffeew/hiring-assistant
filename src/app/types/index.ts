@@ -4,6 +4,7 @@ export type ExtractedData = {
   lastName: string;
   email: string;
   template?: EmailTemplate;
+  error?: string; // For failed extractions
 };
 
 export enum EmailTemplate {

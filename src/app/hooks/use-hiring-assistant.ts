@@ -43,6 +43,7 @@ export function useHiringAssistant() {
 
       const data = await response.json();
       // Initialize template field to SCREENING as default for all extracted data
+      // Only add template for successful extractions (those without errors)
       const dataWithDefaultTemplate = data.map((item: ExtractedData) => ({
         ...item,
         template: item.template || EmailTemplate.SCREENING
@@ -57,8 +58,9 @@ export function useHiringAssistant() {
   };
 
   const handleSendEmails = async () => {
-    if (extractedData.length === 0) {
-      alert("No recipients to send emails to.");
+    const successfulExtractions = extractedData.filter(data => !data.error);
+    if (successfulExtractions.length === 0) {
+      alert("No successful extractions to send emails to.");
       return;
     }
 
@@ -71,7 +73,7 @@ export function useHiringAssistant() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          recipients: extractedData,
+          recipients: successfulExtractions,
         }),
       });
 
@@ -107,8 +109,9 @@ export function useHiringAssistant() {
   };
 
   const handlePreviewEmails = async () => {
-    if (extractedData.length === 0) {
-      alert("No recipients to preview emails for.");
+    const successfulExtractions = extractedData.filter(data => !data.error);
+    if (successfulExtractions.length === 0) {
+      alert("No successful extractions to preview emails for.");
       return;
     }
 
@@ -121,7 +124,7 @@ export function useHiringAssistant() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          recipients: extractedData,
+          recipients: successfulExtractions,
         }),
       });
 

@@ -37,7 +37,7 @@ export function ResultsTable({
 		field: keyof ExtractedData,
 		currentValue: string
 	) => {
-		if (field === "fileName") return; // Don't allow editing filename
+		if (field === "fileName" || extractedData[rowIndex].error) return; // Don't allow editing filename or failed extractions
 		setEditingCell({ row: rowIndex, field });
 		setEditValue(currentValue);
 	};
@@ -67,6 +67,10 @@ export function ResultsTable({
 		onUpdateData(rowIndex, "template", template);
 	};
 
+	// Calculate successful vs failed extractions
+	const successfulExtractions = extractedData.filter((data) => !data.error);
+	const failedExtractions = extractedData.filter((data) => data.error);
+
 	if (extractedData.length === 0) {
 		return null;
 	}
@@ -85,7 +89,7 @@ export function ResultsTable({
 								scope="col"
 								className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground"
 							>
-								File Name
+								File Name & Status
 							</th>
 							<th
 								scope="col"
@@ -109,7 +113,7 @@ export function ResultsTable({
 								scope="col"
 								className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground"
 							>
-								Email Template
+								Email Template / Error Details
 							</th>
 						</tr>
 					</thead>
@@ -117,20 +121,46 @@ export function ResultsTable({
 						{extractedData.map((data, index) => (
 							<tr
 								key={index}
-								className="transition-colors duration-200 hover:bg-opacity-50 border-b border-border"
+								className={`transition-colors duration-200 hover:bg-opacity-50 border-b border-border ${
+									data.error ? "bg-red-50 dark:bg-red-900/20" : ""
+								}`}
 							>
 								<td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-foreground">
-									{data.fileName}
+									<div className="flex items-center">
+										{data.error ? (
+											<span
+												className="text-red-500 mr-2"
+												title="Failed to extract"
+											>
+												❌
+											</span>
+										) : (
+											<span
+												className="text-green-500 mr-2"
+												title="Successfully extracted"
+											>
+												✅
+											</span>
+										)}
+										{data.fileName}
+									</div>
 								</td>
 								<td
-									className="px-6 py-4 whitespace-nowrap text-sm cursor-pointer hover:bg-opacity-70 transition-colors text-muted-foreground"
+									className={`px-6 py-4 whitespace-nowrap text-sm transition-colors text-muted-foreground ${
+										data.error ? "" : "cursor-pointer hover:bg-opacity-70"
+									}`}
 									onClick={() =>
+										!data.error &&
 										handleCellClick(index, "firstName", data.firstName)
 									}
-									title="Click to edit"
+									title={data.error ? "" : "Click to edit"}
 								>
-									{editingCell?.row === index &&
-									editingCell?.field === "firstName" ? (
+									{data.error ? (
+										<span className="text-red-500 italic">
+											Error extracting
+										</span>
+									) : editingCell?.row === index &&
+									  editingCell?.field === "firstName" ? (
 										<input
 											type="text"
 											value={editValue}
@@ -147,14 +177,21 @@ export function ResultsTable({
 									)}
 								</td>
 								<td
-									className="px-6 py-4 whitespace-nowrap text-sm cursor-pointer hover:bg-opacity-70 transition-colors text-muted-foreground"
+									className={`px-6 py-4 whitespace-nowrap text-sm transition-colors text-muted-foreground ${
+										data.error ? "" : "cursor-pointer hover:bg-opacity-70"
+									}`}
 									onClick={() =>
+										!data.error &&
 										handleCellClick(index, "lastName", data.lastName)
 									}
-									title="Click to edit"
+									title={data.error ? "" : "Click to edit"}
 								>
-									{editingCell?.row === index &&
-									editingCell?.field === "lastName" ? (
+									{data.error ? (
+										<span className="text-red-500 italic">
+											Error extracting
+										</span>
+									) : editingCell?.row === index &&
+									  editingCell?.field === "lastName" ? (
 										<input
 											type="text"
 											value={editValue}
@@ -171,12 +208,20 @@ export function ResultsTable({
 									)}
 								</td>
 								<td
-									className="px-6 py-4 whitespace-nowrap text-sm cursor-pointer hover:bg-opacity-70 transition-colors text-muted-foreground"
-									onClick={() => handleCellClick(index, "email", data.email)}
-									title="Click to edit"
+									className={`px-6 py-4 whitespace-nowrap text-sm transition-colors text-muted-foreground ${
+										data.error ? "" : "cursor-pointer hover:bg-opacity-70"
+									}`}
+									onClick={() =>
+										!data.error && handleCellClick(index, "email", data.email)
+									}
+									title={data.error ? "" : "Click to edit"}
 								>
-									{editingCell?.row === index &&
-									editingCell?.field === "email" ? (
+									{data.error ? (
+										<span className="text-red-500 italic">
+											Error extracting
+										</span>
+									) : editingCell?.row === index &&
+									  editingCell?.field === "email" ? (
 										<input
 											type="email"
 											value={editValue}
@@ -193,23 +238,30 @@ export function ResultsTable({
 									)}
 								</td>
 								<td className="px-6 py-4 whitespace-nowrap text-sm">
-									<select
-										value={data.template || EmailTemplate.ACKNOWLEDGMENT}
-										onChange={(e) =>
-											handleTemplateChange(
-												index,
-												e.target.value as EmailTemplate
-											)
-										}
-										className="w-full px-3 py-2 rounded border text-sm transition-colors duration-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-card text-foreground border-border"
-									>
-										<option value={EmailTemplate.ACKNOWLEDGMENT}>
-											📧 Acknowledgment
-										</option>
-										<option value={EmailTemplate.SCREENING}>
-											🔍 Screening Questions
-										</option>
-									</select>
+									{data.error ? (
+										<div className="text-red-500">
+											<span className="text-xs block">❌ Failed</span>
+											<span className="text-xs italic">{data.error}</span>
+										</div>
+									) : (
+										<select
+											value={data.template || EmailTemplate.ACKNOWLEDGMENT}
+											onChange={(e) =>
+												handleTemplateChange(
+													index,
+													e.target.value as EmailTemplate
+												)
+											}
+											className="w-full px-3 py-2 rounded border text-sm transition-colors duration-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-card text-foreground border-border"
+										>
+											<option value={EmailTemplate.ACKNOWLEDGMENT}>
+												📧 Acknowledgment
+											</option>
+											<option value={EmailTemplate.SCREENING}>
+												🔍 Screening Questions
+											</option>
+										</select>
+									)}
 								</td>
 							</tr>
 						))}
@@ -218,19 +270,26 @@ export function ResultsTable({
 			</div>
 			<div className="flex justify-between items-center mt-6">
 				<div className="text-sm px-3 py-2 rounded-md bg-muted text-muted-foreground">
-					📊 {extractedData.length} candidate
-					{extractedData.length !== 1 ? "s" : ""} ready to contact
+					<div className="flex items-center space-x-4">
+						<span>✅ {successfulExtractions.length} successful</span>
+						{failedExtractions.length > 0 && (
+							<span className="text-red-500">
+								❌ {failedExtractions.length} failed
+							</span>
+						)}
+					</div>
 					<div className="text-xs mt-1 opacity-75">
 						💡 Click on fields to edit • Select email template for each
 						candidate
+						{failedExtractions.length > 0 && " • Failed files cannot be edited"}
 					</div>
 				</div>
 				<div className="flex space-x-3">
 					<button
 						onClick={onPreviewEmails}
-						disabled={isPreviewingEmails}
+						disabled={isPreviewingEmails || successfulExtractions.length === 0}
 						className={`px-6 py-2 font-semibold rounded-full transition-all duration-300 flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed border border-border ${
-							isPreviewingEmails
+							isPreviewingEmails || successfulExtractions.length === 0
 								? "bg-muted text-muted-foreground"
 								: "bg-muted text-foreground hover:bg-muted/80"
 						}`}
@@ -240,9 +299,9 @@ export function ResultsTable({
 					</button>
 					<button
 						onClick={onSendEmails}
-						disabled={isSendingEmails}
+						disabled={isSendingEmails || successfulExtractions.length === 0}
 						className={`px-6 py-2 font-semibold rounded-full transition-all duration-300 flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed ${
-							isSendingEmails
+							isSendingEmails || successfulExtractions.length === 0
 								? "bg-muted text-muted-foreground"
 								: "bg-secondary text-white hover:bg-secondary-hover"
 						}`}

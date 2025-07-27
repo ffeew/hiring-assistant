@@ -3,6 +3,7 @@ import { extractContactInfoFromResume } from "./extract.service";
 import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
 import { SUPPORTED_FILE_TYPES } from "@/app/types";
+import { SDKError } from "@mistralai/mistralai/models/errors/sdkerror";
 
 
 
@@ -31,7 +32,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const extractedData = await Promise.all(
+    const extractedData = await Promise.allSettled(
       files.map(async (file) => {
 
         // Type narrowing to ensure file type is supported
@@ -48,7 +49,28 @@ export async function POST(request: NextRequest) {
       })
     );
 
-    return NextResponse.json(extractedData);
+    // Process results and separate successful extractions from errors
+    const results = extractedData.map((result, index) => {
+      if (result.status === 'fulfilled') {
+        return result.value;
+      } else {
+        console.error(`Error processing file ${files[index].name}:`, result.reason);
+
+        // result.reason is an SDKError, we can extract the message
+        if (result.reason instanceof SDKError) {
+          return {
+            fileName: files[index].name,
+            error: JSON.parse(result.reason.body).message
+          };
+        }
+        return {
+          fileName: files[index].name,
+          error: result.reason instanceof Error ? result.reason.message : 'Unknown error occurred'
+        };
+      }
+    });
+
+    return NextResponse.json(results);
   } catch (error) {
     console.error("Error extracting data:", error);
     return NextResponse.json(
