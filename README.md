@@ -146,8 +146,6 @@ The system is functional for immediate use in screening candidates, with all ess
 
 ## 🔮 Future Roadmap
 
-## 🔮 Future Roadmap
-
 ### 🗄️ Database Integration (Phase 1)
 
 - **Template Management**: Store email templates in database for easy customization
