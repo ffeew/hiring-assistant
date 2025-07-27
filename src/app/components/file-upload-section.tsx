@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { LoadingSpinner } from "./loading-spinner";
+import { SUPPORTED_FILE_TYPES } from "../types";
 
 type FileUploadSectionProps = {
 	files: File[];
@@ -45,8 +46,10 @@ export function FileUploadSection({
 
 		if (isLoading) return;
 
-		const droppedFiles = Array.from(e.dataTransfer.files).filter(
-			(file) => file.type === "application/pdf"
+		const droppedFiles = Array.from(e.dataTransfer.files).filter((file) =>
+			SUPPORTED_FILE_TYPES.includes(
+				file.type as (typeof SUPPORTED_FILE_TYPES)[number]
+			)
 		);
 
 		if (droppedFiles.length > 0 && fileInputRef.current) {
