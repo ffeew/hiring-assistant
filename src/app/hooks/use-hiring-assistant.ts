@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { ExtractedData } from "../types";
+import { EmailTemplate } from "../types";
 
 export function useHiringAssistant() {
   const [files, setFiles] = useState<File[]>([]);
@@ -41,7 +42,12 @@ export function useHiringAssistant() {
       }
 
       const data = await response.json();
-      setExtractedData(data);
+      // Initialize template field to SCREENING as default for all extracted data
+      const dataWithDefaultTemplate = data.map((item: ExtractedData) => ({
+        ...item,
+        template: item.template || EmailTemplate.SCREENING
+      }));
+      setExtractedData(dataWithDefaultTemplate);
     } catch (error) {
       console.error("Error uploading files:", error);
       alert("Error extracting data from resumes.");
