@@ -1,11 +1,10 @@
-import { EmailData } from '../email.service';
-import { env, isCompanyTemplateConfigured } from '@/lib/env';
+import { EmailData, UserEmailConfig } from '../email.service';
 
-export function generateScreeningTemplate(recipient: EmailData): string {
-  const companyName = isCompanyTemplateConfigured() ? env.COMPANY_NAME! : 'Our Company';
-  const position = isCompanyTemplateConfigured() ? env.COMPANY_POSITION! : 'Software Engineer Intern';
-  const senderName = env.SENDER_NAME || 'The Hiring Team';
-  const senderTitle = isCompanyTemplateConfigured() ? env.SENDER_TITLE! : 'Hiring Manager';
+export function generateScreeningTemplate(recipient: EmailData, userConfig: UserEmailConfig): string {
+  const companyName = userConfig.companyName || 'Our Company';
+  const position = recipient.jobPosition || 'Software Engineer Intern';
+  const senderName = userConfig.senderName || 'The Hiring Team';
+  const senderTitle = userConfig.jobTitle || 'Hiring Manager';
 
   return `
     <!DOCTYPE html>

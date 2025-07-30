@@ -1,5 +1,4 @@
 import nodemailer from 'nodemailer';
-import { env, isEmailConfigured, isCompanyTemplateConfigured } from '@/lib/env';
 import { generateAcknowledgmentTemplate, generateScreeningTemplate } from './templates';
 
 export enum EmailTemplate {
@@ -13,24 +12,35 @@ export interface EmailData {
   email: string;
   fileName: string;
   template?: EmailTemplate;
+  jobPosition?: string;
+}
+
+export interface UserEmailConfig {
+  gmailAddress: string;
+  gmailAppPassword: string;
+  senderName: string;
+  companyName?: string;
+  jobTitle?: string;
 }
 
 export class EmailService {
   private transporter: nodemailer.Transporter;
+  private userConfig: UserEmailConfig;
 
-  constructor() {
-    if (!isEmailConfigured()) {
-      throw new Error('Email configuration is incomplete. Please set GMAIL_USER, GMAIL_APP_PASSWORD, and SENDER_NAME.');
+  constructor(userConfig: UserEmailConfig) {
+    if (!userConfig.gmailAddress || !userConfig.gmailAppPassword || !userConfig.senderName) {
+      throw new Error('Email configuration is incomplete. User must have gmailAddress, gmailAppPassword, and senderName configured.');
     }
 
+    this.userConfig = userConfig;
     this.transporter = nodemailer.createTransport({
       service: 'gmail',
       host: 'smtp.gmail.com',
       port: 587,
       secure: false,
       auth: {
-        user: env.GMAIL_USER,
-        pass: env.GMAIL_APP_PASSWORD,
+        user: userConfig.gmailAddress,
+        pass: userConfig.gmailAppPassword,
       },
     });
   }
@@ -41,7 +51,7 @@ export class EmailService {
       const { subject, html } = this.getEmailContent(recipient, template);
 
       const mailOptions = {
-        from: `"${env.SENDER_NAME!}" <${env.GMAIL_USER!}>`,
+        from: `"${this.userConfig.senderName}" <${this.userConfig.gmailAddress}>`,
         to: recipient.email,
         subject,
         html,
@@ -90,20 +100,20 @@ export class EmailService {
   }
 
   private getEmailContent(recipient: EmailData, template: EmailTemplate): { subject: string; html: string; } {
-    const companyName = isCompanyTemplateConfigured() ? env.COMPANY_NAME! : 'Our Company';
-    const position = isCompanyTemplateConfigured() ? env.COMPANY_POSITION! : 'Software Engineer Intern';
+    const companyName = this.userConfig.companyName || 'Our Company';
+    const position = recipient.jobPosition || 'Software Engineer Intern';
 
     switch (template) {
       case EmailTemplate.SCREENING:
         return {
           subject: `Next Steps - ${position} Position at ${companyName}`,
-          html: generateScreeningTemplate(recipient)
+          html: generateScreeningTemplate(recipient, this.userConfig)
         };
       case EmailTemplate.ACKNOWLEDGMENT:
       default:
         return {
           subject: `Thank you for your interest in our position at ${companyName}`,
-          html: generateAcknowledgmentTemplate(recipient)
+          html: generateAcknowledgmentTemplate(recipient, this.userConfig)
         };
     }
   }

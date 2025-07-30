@@ -1,108 +1,119 @@
 "use client";
 
 import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { authClient } from "@/app/utils/auth-client";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
+const loginSchema = z.object({
+  email: z.string().email("Please enter a valid email address"),
+  password: z.string().min(1, "Password is required"),
+});
+
+type LoginFormData = z.infer<typeof loginSchema>;
+
 export function LoginForm() {
-	const [email, setEmail] = useState("");
-	const [password, setPassword] = useState("");
-	const [isLoading, setIsLoading] = useState(false);
-	const [error, setError] = useState("");
-	const router = useRouter();
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
+  const router = useRouter();
 
-	const handleSubmit = async (e: React.FormEvent) => {
-		e.preventDefault();
-		setIsLoading(true);
-		setError("");
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<LoginFormData>({
+    resolver: zodResolver(loginSchema),
+  });
 
-		try {
-			const { data, error } = await authClient.signIn.email({
-				email,
-				password,
-			});
+  const onSubmit = async (data: LoginFormData) => {
+    setIsLoading(true);
+    setError("");
 
-			if (error) {
-				setError(error.message || "Failed to sign in");
-			} else if (data) {
-				router.push("/");
-				router.refresh();
-			}
-		} catch (err) {
-			console.error("Login error:", err);
-			setError("An unexpected error occurred");
-		} finally {
-			setIsLoading(false);
-		}
-	};
+    try {
+      const { data: result, error: authError } = await authClient.signIn.email({
+        email: data.email,
+        password: data.password,
+      });
 
-	return (
-		<div className="max-w-md mx-auto mt-16 p-6 bg-background border border-border rounded-lg shadow-lg">
-			<h2 className="text-2xl font-bold text-center mb-6 text-foreground">
-				Sign In
-			</h2>
+      if (authError) {
+        setError(authError.message || "Failed to sign in");
+      } else if (result) {
+        router.push("/");
+        router.refresh();
+      }
+    } catch (err) {
+      console.error("Login error:", err);
+      setError("An unexpected error occurred");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-			<form onSubmit={handleSubmit} className="space-y-4">
-				{error && (
-					<div className="p-3 bg-red-100 border border-red-400 text-red-700 rounded">
-						{error}
-					</div>
-				)}
+  return (
+    <div className="max-w-md mx-auto mt-16 p-6 bg-background border border-border rounded-lg shadow-lg">
+      <h2 className="text-2xl font-bold text-center mb-6 text-foreground">
+        Sign In to Hiring Assistant
+      </h2>
 
-				<div>
-					<label
-						htmlFor="email"
-						className="block text-sm font-medium text-foreground mb-1"
-					>
-						Email
-					</label>
-					<input
-						id="email"
-						type="email"
-						value={email}
-						onChange={(e) => setEmail(e.target.value)}
-						required
-						className="w-full px-3 py-2 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent bg-background text-foreground"
-						placeholder="Enter your email"
-					/>
-				</div>
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        {error && (
+          <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-md">
+            <p className="text-sm text-destructive">{error}</p>
+          </div>
+        )}
 
-				<div>
-					<label
-						htmlFor="password"
-						className="block text-sm font-medium text-foreground mb-1"
-					>
-						Password
-					</label>
-					<input
-						id="password"
-						type="password"
-						value={password}
-						onChange={(e) => setPassword(e.target.value)}
-						required
-						className="w-full px-3 py-2 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent bg-background text-foreground"
-						placeholder="Enter your password"
-					/>
-				</div>
+        <div>
+          <label htmlFor="email" className="block text-sm font-medium text-foreground mb-1">
+            Email
+          </label>
+          <input
+            {...register("email")}
+            id="email"
+            type="email"
+            className="w-full px-3 py-2 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent bg-background text-foreground"
+            placeholder="Enter your email"
+          />
+          {errors.email && (
+            <p className="text-sm text-destructive mt-1">{errors.email.message}</p>
+          )}
+        </div>
 
-				<button
-					type="submit"
-					disabled={isLoading}
-					className="w-full bg-primary text-primary-foreground py-2 px-4 rounded-md hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-				>
-					{isLoading ? "Signing in..." : "Sign In"}
-				</button>
-			</form>
+        <div>
+          <label htmlFor="password" className="block text-sm font-medium text-foreground mb-1">
+            Password
+          </label>
+          <input
+            {...register("password")}
+            id="password"
+            type="password"
+            className="w-full px-3 py-2 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent bg-background text-foreground"
+            placeholder="Enter your password"
+          />
+          {errors.password && (
+            <p className="text-sm text-destructive mt-1">{errors.password.message}</p>
+          )}
+        </div>
 
-			<div className="mt-4 text-center">
-				<span className="flex gap-1 text-sm text-muted-foreground w-full justify-center items-center">
-					Don&apos;t have an account?
-					<Link href="/signup" className="text-primary hover:underline">
-						Sign up
-					</Link>
-				</span>
-			</div>
-		</div>
-	);
+        <button
+          type="submit"
+          disabled={isLoading}
+          className="w-full bg-primary text-primary-foreground py-2 px-4 rounded-md hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+        >
+          {isLoading ? "Signing in..." : "Sign In"}
+        </button>
+      </form>
+
+      <div className="mt-4 text-center">
+        <span className="text-sm text-muted-foreground">
+          Don&apos;t have an account?{" "}
+          <Link href="/signup" className="text-primary hover:underline">
+            Create one here
+          </Link>
+        </span>
+      </div>
+    </div>
+  );
 }

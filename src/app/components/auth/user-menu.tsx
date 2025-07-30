@@ -1,21 +1,31 @@
 "use client";
 
+import { useState } from "react";
 import { authClient } from "@/app/utils/auth-client";
 import { useRouter } from "next/navigation";
-import type { User } from "better-auth/types";
+import type { Session } from "@/lib/auth";
 import Image from "next/image";
+import { ProfileSettingsModal } from "../profile-settings-modal";
+
+type User = Session['user'];
 
 interface UserMenuProps {
 	user: User;
 }
 
-export function UserMenu({ user }: UserMenuProps) {
+export function UserMenu({ user: initialUser }: UserMenuProps) {
 	const router = useRouter();
+	const [user, setUser] = useState(initialUser);
+	const [showProfileSettings, setShowProfileSettings] = useState(false);
 
 	const handleSignOut = async () => {
 		await authClient.signOut();
 		router.push("/login");
 		router.refresh();
+	};
+
+	const handleProfileUpdate = (updatedUser: User) => {
+		setUser(updatedUser);
 	};
 
 	return (
@@ -57,6 +67,12 @@ export function UserMenu({ user }: UserMenuProps) {
 						<div className="truncate">{user.email}</div>
 					</div>
 					<button
+						onClick={() => setShowProfileSettings(true)}
+						className="w-full text-left px-4 py-2 text-sm text-foreground hover:bg-secondary transition-colors"
+					>
+						Profile Settings
+					</button>
+					<button
 						onClick={handleSignOut}
 						className="w-full text-left px-4 py-2 text-sm text-foreground hover:bg-secondary transition-colors"
 					>
@@ -64,6 +80,12 @@ export function UserMenu({ user }: UserMenuProps) {
 					</button>
 				</div>
 			</div>
+			<ProfileSettingsModal
+				isOpen={showProfileSettings}
+				onClose={() => setShowProfileSettings(false)}
+				user={user}
+				onUpdate={handleProfileUpdate}
+			/>
 		</div>
 	);
 }

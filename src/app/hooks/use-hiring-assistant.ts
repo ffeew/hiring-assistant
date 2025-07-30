@@ -1,17 +1,30 @@
 "use client";
 
-import { useState } from "react";
-import type { ExtractedData } from "../types";
+import { useState, useEffect } from "react";
+import type { ExtractedData, JobPost } from "../types";
 import { EmailTemplate } from "../types";
+import { useJobPosts } from "./use-job-posts";
 
 export function useHiringAssistant() {
   const [files, setFiles] = useState<File[]>([]);
   const [extractedData, setExtractedData] = useState<ExtractedData[]>([]);
+  const [selectedJobPost, setSelectedJobPost] = useState<JobPost | null>(null);
+  const [customJobPosition, setCustomJobPosition] = useState("Software Engineer Intern");
   const [isExtracting, setIsExtracting] = useState(false);
   const [isPreviewingEmails, setIsPreviewingEmails] = useState(false);
   const [isSendingEmails, setIsSendingEmails] = useState(false);
   const [emailPreviews, setEmailPreviews] = useState<{ html: string, subject: string, recipient: ExtractedData; }[]>([]);
   const [showEmailPreview, setShowEmailPreview] = useState(false);
+
+  // Fetch user's active job posts using TanStack Query
+  const { data: jobPosts = [], isLoading: isLoadingJobPosts } = useJobPosts(true);
+
+  // Auto-select the first active job post when data loads
+  useEffect(() => {
+    if (jobPosts.length > 0 && !selectedJobPost) {
+      setSelectedJobPost(jobPosts[0]);
+    }
+  }, [jobPosts, selectedJobPost]);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files) {
@@ -73,7 +86,10 @@ export function useHiringAssistant() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          recipients: successfulExtractions,
+          recipients: successfulExtractions.map(data => ({
+            ...data,
+            jobPosition: selectedJobPost?.title || customJobPosition,
+          })),
         }),
       });
 
@@ -124,7 +140,10 @@ export function useHiringAssistant() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          recipients: successfulExtractions,
+          recipients: successfulExtractions.map(data => ({
+            ...data,
+            jobPosition: selectedJobPost?.title || customJobPosition,
+          })),
         }),
       });
 
@@ -154,9 +173,15 @@ export function useHiringAssistant() {
   return {
     files,
     extractedData,
+    jobPosts,
+    selectedJobPost,
+    setSelectedJobPost,
+    customJobPosition,
+    setCustomJobPosition,
     isExtracting,
     isPreviewingEmails,
     isSendingEmails,
+    isLoadingJobPosts,
     emailPreviews,
     showEmailPreview,
     handleFileChange,

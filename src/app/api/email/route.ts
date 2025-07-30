@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { EmailService, EmailData } from './email.service';
-import { isEmailConfigured } from '@/lib/env';
+import { EmailService, EmailData, UserEmailConfig } from './email.service';
 import { auth } from '@/lib/auth';
 import { headers } from 'next/headers';
+import { safeDecrypt } from '@/lib/crypto';
 
 export async function POST(request: NextRequest) {
 
@@ -28,15 +28,26 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if email is configured
-    if (!isEmailConfigured()) {
+    // Check if user has email configuration
+    if (!session.user.gmailAddress || !session.user.gmailAppPassword || !session.user.name) {
       return NextResponse.json(
-        { error: 'Email service not configured. Please set GMAIL_USER, GMAIL_APP_PASSWORD, and SENDER_NAME environment variables.' },
-        { status: 500 }
+        { error: 'Email service not configured. Please configure your Gmail address, app password, and ensure your profile name is set.' },
+        { status: 400 }
       );
     }
 
-    const emailService = new EmailService();
+    // Decrypt the Gmail app password for use
+    const decryptedPassword = session.user.gmailAppPassword ? safeDecrypt(session.user.gmailAppPassword) : '';
+
+    const userConfig: UserEmailConfig = {
+      gmailAddress: session.user.gmailAddress,
+      gmailAppPassword: decryptedPassword,
+      senderName: session.user.name,
+      companyName: session.user.companyName || undefined,
+      jobTitle: session.user.jobTitle || undefined,
+    };
+
+    const emailService = new EmailService(userConfig);
 
     // Test connection first
     const connectionTest = await emailService.testConnection();

@@ -1,9 +1,8 @@
-import { EmailData } from '../email.service';
-import { env, isCompanyTemplateConfigured } from '@/lib/env';
+import { EmailData, UserEmailConfig } from '../email.service';
 
-export function generateAcknowledgmentTemplate(recipient: EmailData): string {
-  const companyName = isCompanyTemplateConfigured() ? env.COMPANY_NAME! : 'Our Company';
-  const senderName = env.SENDER_NAME || 'The Hiring Team';
+export function generateAcknowledgmentTemplate(recipient: EmailData, userConfig: UserEmailConfig): string {
+  const companyName = userConfig.companyName || 'Our Company';
+  const senderName = userConfig.senderName || 'The Hiring Team';
 
   return `
     <!DOCTYPE html>

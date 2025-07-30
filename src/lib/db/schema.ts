@@ -8,6 +8,10 @@ export const user = sqliteTable("user", {
     .$defaultFn(() => false)
     .notNull(),
   image: text("image"),
+  gmailAddress: text("gmail_address"),
+  gmailAppPassword: text("gmail_app_password"),
+  companyName: text("company_name"),
+  jobTitle: text("job_title"),
   createdAt: integer("created_at", { mode: "timestamp" })
     .$defaultFn(() => /* @__PURE__ */ new Date())
     .notNull(),
@@ -62,4 +66,30 @@ export const verification = sqliteTable("verification", {
   updatedAt: integer("updated_at", { mode: "timestamp" }).$defaultFn(
     () => /* @__PURE__ */ new Date(),
   ),
+});
+
+export const jobPost = sqliteTable("job_post", {
+  id: text("id").primaryKey(),
+  userId: text("user_id")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
+  title: text("title").notNull(),
+  department: text("department"),
+  location: text("location"),
+  employmentType: text("employment_type"), // full-time, part-time, contract, internship
+  experienceLevel: text("experience_level"), // entry, mid, senior
+  description: text("description").notNull(),
+  requirements: text("requirements"), // JSON string of requirements array
+  responsibilities: text("responsibilities"), // JSON string of responsibilities array
+  benefits: text("benefits"), // JSON string of benefits array
+  salaryRange: text("salary_range"),
+  isActive: integer("is_active", { mode: "boolean" })
+    .$defaultFn(() => true)
+    .notNull(),
+  createdAt: integer("created_at", { mode: "timestamp" })
+    .$defaultFn(() => /* @__PURE__ */ new Date())
+    .notNull(),
+  updatedAt: integer("updated_at", { mode: "timestamp" })
+    .$defaultFn(() => /* @__PURE__ */ new Date())
+    .notNull(),
 });
