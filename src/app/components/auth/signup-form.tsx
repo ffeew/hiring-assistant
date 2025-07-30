@@ -6,7 +6,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { authClient } from "@/app/utils/auth-client";
 import { useRouter } from "next/navigation";
-import { safeEncrypt } from "@/lib/crypto";
 
 const signupSchema = z.object({
   name: z.string().min(1, "Full name is required"),
@@ -42,15 +41,12 @@ export function SignUpForm() {
     setError("");
 
     try {
-      // Encrypt the Gmail app password before sending
-      const encryptedPassword = data.gmailAppPassword ? safeEncrypt(data.gmailAppPassword) : undefined;
-      
       const { data: result, error: authError } = await authClient.signUp.email({
         email: data.email,
         password: data.password,
         name: data.name,
         gmailAddress: data.gmailAddress,
-        gmailAppPassword: encryptedPassword,
+        gmailAppPassword: data.gmailAppPassword,
         companyName: data.companyName || undefined,
         jobTitle: data.jobTitle || undefined,
       });
