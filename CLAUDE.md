@@ -54,10 +54,10 @@ This is a **Next.js 15 hiring assistant application** that automates resume proc
 
 ### Key Architectural Patterns
 
-**Environment Configuration with Feature Flags**
-- `src/lib/env.ts` provides comprehensive Zod-based environment validation
-- Feature detection functions: `isEmailConfigured()`, `isCompanyTemplateConfigured()`, `isDatabaseConfigured()`
-- Validates related environment variables as groups (all Gmail settings required together)
+**Environment Configuration**
+- `src/lib/env.ts` provides Zod-based environment validation for core services
+- Validates essential configuration: Mistral AI, Better Auth, and Turso database
+- User-specific configuration (email, company details) stored in database per user
 - Environment status debugging via `getEnvironmentStatus()`
 
 **Data Fetching Architecture**
