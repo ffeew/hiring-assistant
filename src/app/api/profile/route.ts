@@ -1,22 +1,11 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
-import { headers } from 'next/headers';
+import { NextResponse } from 'next/server';
 import { db } from '@/lib/db/db';
 import { user as userTable } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { safeEncrypt } from '@/lib/crypto';
+import { withAuth, AuthenticatedRequest } from '@/lib/auth-middleware';
 
-export async function PATCH(request: NextRequest) {
-  const session = await auth.api.getSession({
-    headers: await headers()
-  });
-
-  if (!session) {
-    return NextResponse.json(
-      { error: "Unauthorized" },
-      { status: 401 }
-    );
-  }
+async function updateProfile(request: AuthenticatedRequest) {
 
   try {
     const body = await request.json();
@@ -43,7 +32,7 @@ export async function PATCH(request: NextRequest) {
         jobTitle: jobTitle || null,
         updatedAt: new Date(),
       })
-      .where(eq(userTable.id, session.user.id))
+      .where(eq(userTable.id, request.user.id))
       .returning();
 
     if (!updatedUser) {
@@ -72,23 +61,12 @@ export async function PATCH(request: NextRequest) {
   }
 }
 
-export async function GET() {
-  const session = await auth.api.getSession({
-    headers: await headers()
-  });
-
-  if (!session) {
-    return NextResponse.json(
-      { error: "Unauthorized" },
-      { status: 401 }
-    );
-  }
-
+async function getProfile(request: AuthenticatedRequest) {
   try {
     const [userProfile] = await db
       .select()
       .from(userTable)
-      .where(eq(userTable.id, session.user.id))
+      .where(eq(userTable.id, request.user.id))
       .limit(1);
 
     if (!userProfile) {
@@ -116,3 +94,7 @@ export async function GET() {
     );
   }
 }
+
+// Export authenticated route handlers
+export const PATCH = withAuth(updateProfile);
+export const GET = withAuth(getProfile);

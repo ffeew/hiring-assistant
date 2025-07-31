@@ -1,34 +1,20 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { EmailService, EmailData, EmailTemplate, UserEmailConfig } from '../email.service';
-import { auth } from '@/lib/auth';
-import { headers } from 'next/headers';
 import { safeDecrypt } from '@/lib/crypto';
+import { emailPreviewRequestSchema } from '@/app/types';
+import { withAuth, AuthenticatedRequest } from '@/lib/auth-middleware';
 
-export async function POST(request: NextRequest) {
-
-  const session = await auth.api.getSession({
-    headers: await headers()
-  });
-
-  if (!session) {
-    return NextResponse.json(
-      { error: "Unauthorized" },
-      { status: 401 }
-    );
-  }
+async function generateEmailPreviews(request: AuthenticatedRequest) {
 
   try {
-    const { recipients } = await request.json();
+    const body = await request.json();
 
-    if (!recipients || !Array.isArray(recipients) || recipients.length === 0) {
-      return NextResponse.json(
-        { error: 'Recipients array is required and cannot be empty' },
-        { status: 400 }
-      );
-    }
+    // Validate request body with Zod
+    const validatedData = emailPreviewRequestSchema.parse(body);
+    const { recipients } = validatedData;
 
     // Check if user has email configuration
-    if (!session.user.gmailAddress || !session.user.gmailAppPassword || !session.user.name) {
+    if (!request.user.gmailAddress || !request.user.gmailAppPassword || !request.user.name) {
       return NextResponse.json(
         { error: 'Email service not configured. Please configure your Gmail address, app password, and ensure your profile name is set.' },
         { status: 400 }
@@ -36,21 +22,21 @@ export async function POST(request: NextRequest) {
     }
 
     // Decrypt the Gmail app password for use
-    const decryptedPassword = session.user.gmailAppPassword ? safeDecrypt(session.user.gmailAppPassword) : '';
+    const decryptedPassword = request.user.gmailAppPassword ? safeDecrypt(request.user.gmailAppPassword) : '';
 
     const userConfig: UserEmailConfig = {
-      gmailAddress: session.user.gmailAddress,
+      gmailAddress: request.user.gmailAddress,
       gmailAppPassword: decryptedPassword,
-      senderName: session.user.name,
-      companyName: session.user.companyName || undefined,
-      jobTitle: session.user.jobTitle || undefined,
+      senderName: request.user.name,
+      companyName: request.user.companyName || undefined,
+      jobTitle: request.user.jobTitle || undefined,
     };
 
     const emailService: EmailService = new EmailService(userConfig);
 
     // Generate previews for each recipient
-    const previews = recipients.map((recipient: EmailData) => {
-      const template = recipient.template || EmailTemplate.ACKNOWLEDGMENT;
+    const previews = recipients.map((recipient) => {
+      const template = (recipient.template === 'screening' ? EmailTemplate.SCREENING : EmailTemplate.ACKNOWLEDGMENT);
       const companyName = userConfig.companyName || 'Our Company';
       const position = userConfig.jobTitle || 'Software Engineer Intern';
       const subject = template === EmailTemplate.SCREENING
@@ -58,7 +44,7 @@ export async function POST(request: NextRequest) {
         : `Thank you for your interest in our position at ${companyName}`;
 
       return {
-        html: emailService.generateEmailTemplate(recipient),
+        html: emailService.generateEmailTemplate(recipient as EmailData),
         subject,
         recipient,
         template
@@ -78,3 +64,6 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+
+// Export authenticated route handler
+export const POST = withAuth(generateEmailPreviews);

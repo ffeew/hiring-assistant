@@ -1,52 +1,31 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
-import { headers } from 'next/headers';
+import { NextResponse } from 'next/server';
 import { db } from '@/lib/db/db';
+import { withTransaction } from '@/lib/db/transaction';
 import { jobPost } from '@/lib/db/schema';
-import { eq, desc, and } from 'drizzle-orm';
+import { eq, desc } from 'drizzle-orm';
+import { createJobPostSchema } from '@/app/types';
 import { z } from 'zod';
+import { withAuth, AuthenticatedRequest } from '@/lib/auth-middleware';
+import { withNotDeleted } from '@/lib/soft-delete';
+import { nanoid } from 'nanoid';
 
-const createJobPostSchema = z.object({
-  title: z.string().min(1, "Job title is required"),
-  department: z.string().optional(),
-  location: z.string().optional(),
-  employmentType: z.enum(['full-time', 'part-time', 'contract', 'internship']).optional(),
-  experienceLevel: z.enum(['entry', 'mid', 'senior']).optional(),
-  description: z.string().min(1, "Job description is required"),
-  requirements: z.array(z.string()).optional(),
-  responsibilities: z.array(z.string()).optional(),
-  benefits: z.array(z.string()).optional(),
-  salaryRange: z.string().optional(),
-});
-
-// Removed unused updateJobPostSchema
-
-export async function GET(request: NextRequest) {
-  const session = await auth.api.getSession({
-    headers: await headers()
-  });
-
-  if (!session) {
-    return NextResponse.json(
-      { error: "Unauthorized" },
-      { status: 401 }
-    );
-  }
+async function getJobPosts(request: AuthenticatedRequest) {
 
   try {
     const { searchParams } = new URL(request.url);
     const activeOnly = searchParams.get('active') === 'true';
 
-    const conditions = [eq(jobPost.userId, session.user.id)];
-    
+    const baseConditions = [eq(jobPost.userId, request.user.id)];
+
     if (activeOnly) {
-      conditions.push(eq(jobPost.isActive, true));
+      baseConditions.push(eq(jobPost.isActive, true));
     }
 
+    // Get job posts (excluding soft-deleted ones)
     const jobPosts = await db
       .select()
       .from(jobPost)
-      .where(and(...conditions))
+      .where(withNotDeleted(jobPost.deletedAt, ...baseConditions))
       .orderBy(desc(jobPost.createdAt));
 
     // Parse JSON fields
@@ -70,25 +49,14 @@ export async function GET(request: NextRequest) {
   }
 }
 
-export async function POST(request: NextRequest) {
-  const session = await auth.api.getSession({
-    headers: await headers()
-  });
-
-  if (!session) {
-    return NextResponse.json(
-      { error: "Unauthorized" },
-      { status: 401 }
-    );
-  }
-
+async function createJobPost(request: AuthenticatedRequest) {
   try {
     const body = await request.json();
     const validatedData = createJobPostSchema.parse(body);
 
     const newJobPost = {
-      id: crypto.randomUUID(),
-      userId: session.user.id,
+      id: nanoid(),
+      userId: request.user.id,
       title: validatedData.title,
       department: validatedData.department || null,
       location: validatedData.location || null,
@@ -105,6 +73,7 @@ export async function POST(request: NextRequest) {
     };
 
     const [createdJobPost] = await db.insert(jobPost).values(newJobPost).returning();
+
 
     // Parse JSON fields for response
     const responseJobPost = {
@@ -133,3 +102,7 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+
+// Export authenticated route handlers
+export const GET = withAuth(getJobPosts);
+export const POST = withAuth(createJobPost);

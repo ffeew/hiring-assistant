@@ -7,7 +7,7 @@ import type { Session } from "@/lib/auth";
 import Image from "next/image";
 import { ProfileSettingsModal } from "../profile-settings-modal";
 
-type User = Session['user'];
+type User = Session["user"];
 
 interface UserMenuProps {
 	user: User;

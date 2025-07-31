@@ -1,25 +1,10 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { extractContactInfoFromResume } from "./extract.service";
-import { headers } from "next/headers";
-import { auth } from "@/lib/auth";
 import { SUPPORTED_FILE_TYPES } from "@/app/types";
 import { SDKError } from "@mistralai/mistralai/models/errors/sdkerror";
+import { withAuth, AuthenticatedRequest } from "@/lib/auth-middleware";
 
-
-
-
-export async function POST(request: NextRequest) {
-
-  const session = await auth.api.getSession({
-    headers: await headers()
-  });
-
-  if (!session) {
-    return NextResponse.json(
-      { error: "Unauthorized" },
-      { status: 401 }
-    );
-  }
+async function extractResumes(request: AuthenticatedRequest) {
 
   try {
     const formData = await request.formData();
@@ -79,3 +64,6 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+
+// Export authenticated route handler
+export const POST = withAuth(extractResumes);

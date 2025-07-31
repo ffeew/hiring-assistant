@@ -12,6 +12,12 @@ const envSchema = z.object({
   TURSO_DATABASE_URL: z.string().url('TURSO_DATABASE_URL must be a valid URL'),
   TURSO_AUTH_TOKEN: z.string().min(1, 'TURSO_AUTH_TOKEN is required'),
 
+  // Cloudflare R2 Configuration
+  S3_API_URL: z.string().url('S3_API_URL must be a valid URL'),
+  R2_ACCESS_KEY_ID: z.string().min(1, 'R2_ACCESS_KEY_ID is required'),
+  R2_SECRET_ACCESS_KEY: z.string().min(1, 'R2_SECRET_ACCESS_KEY is required'),
+  R2_BUCKET_NAME: z.string().min(1, 'R2_BUCKET_NAME is required'),
+
   // Node environment
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
 });
@@ -48,6 +54,7 @@ export const getEnvironmentStatus = () => {
     mistralApi: !!env.MISTRAL_API_KEY,
     database: !!(env.TURSO_DATABASE_URL && env.TURSO_AUTH_TOKEN),
     auth: !!(env.BETTER_AUTH_SECRET && env.NEXT_PUBLIC_BETTER_AUTH_URL),
+    r2Storage: !!(env.S3_API_URL && env.R2_ACCESS_KEY_ID && env.R2_SECRET_ACCESS_KEY && env.R2_BUCKET_NAME),
     nodeEnv: env.NODE_ENV,
   };
 };

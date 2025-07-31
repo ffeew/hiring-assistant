@@ -1,49 +1,30 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
-import { headers } from 'next/headers';
+import { NextResponse } from 'next/server';
 import { db } from '@/lib/db/db';
+import { withTransaction } from '@/lib/db/transaction';
 import { jobPost } from '@/lib/db/schema';
-import { eq, and } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
+import { updateJobPostSchema } from '@/app/types';
 import { z } from 'zod';
+import { withAuthParams, AuthenticatedRequest } from '@/lib/auth-middleware';
+import { withNotDeleted, softDeleteData } from '@/lib/soft-delete';
 
-const updateJobPostSchema = z.object({
-  title: z.string().min(1, "Job title is required").optional(),
-  department: z.string().optional(),
-  location: z.string().optional(),
-  employmentType: z.enum(['full-time', 'part-time', 'contract', 'internship']).optional(),
-  experienceLevel: z.enum(['entry', 'mid', 'senior']).optional(),
-  description: z.string().min(1, "Job description is required").optional(),
-  requirements: z.array(z.string()).optional(),
-  responsibilities: z.array(z.string()).optional(),
-  benefits: z.array(z.string()).optional(),
-  salaryRange: z.string().optional(),
-  isActive: z.boolean().optional(),
-});
-
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+async function getJobPost(
+  request: AuthenticatedRequest,
+  { params }: { params: Promise<Record<string, string>>; }
 ) {
-  const session = await auth.api.getSession({
-    headers: await headers()
-  });
-
-  if (!session) {
-    return NextResponse.json(
-      { error: "Unauthorized" },
-      { status: 401 }
-    );
-  }
 
   try {
     const resolvedParams = await params;
     const [post] = await db
       .select()
       .from(jobPost)
-      .where(and(
-        eq(jobPost.id, resolvedParams.id),
-        eq(jobPost.userId, session.user.id)
-      ))
+      .where(
+        withNotDeleted(
+          jobPost.deletedAt,
+          eq(jobPost.id, resolvedParams.id),
+          eq(jobPost.userId, request.user.id)
+        )
+      )
       .limit(1);
 
     if (!post) {
@@ -74,65 +55,59 @@ export async function GET(
   }
 }
 
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+async function updateJobPost(
+  request: AuthenticatedRequest,
+  { params }: { params: Promise<Record<string, string>>; }
 ) {
-  const session = await auth.api.getSession({
-    headers: await headers()
-  });
-
-  if (!session) {
-    return NextResponse.json(
-      { error: "Unauthorized" },
-      { status: 401 }
-    );
-  }
-
   try {
     const resolvedParams = await params;
     const body = await request.json();
     const validatedData = updateJobPostSchema.parse(body);
 
-    // Check if job post exists and belongs to user
-    const [existingPost] = await db
-      .select()
-      .from(jobPost)
-      .where(and(
-        eq(jobPost.id, resolvedParams.id),
-        eq(jobPost.userId, session.user.id)
-      ))
-      .limit(1);
+    // Use transaction to ensure atomicity
+    const updatedJobPost = await withTransaction(async (tx) => {
+      // Check if job post exists and belongs to user
+      const [existingPost] = await tx
+        .select()
+        .from(jobPost)
+        .where(
+          withNotDeleted(
+            jobPost.deletedAt,
+            eq(jobPost.id, resolvedParams.id),
+            eq(jobPost.userId, request.user.id)
+          )
+        )
+        .limit(1);
 
-    if (!existingPost) {
-      return NextResponse.json(
-        { error: 'Job post not found' },
-        { status: 404 }
-      );
-    }
+      if (!existingPost) {
+        throw new Error('Job post not found');
+      }
 
-    // Prepare update data
-    const updateData: Record<string, unknown> = {
-      updatedAt: new Date(),
-    };
+      // Prepare update data
+      const updateData: Record<string, unknown> = {
+        updatedAt: new Date(),
+      };
 
-    if (validatedData.title !== undefined) updateData.title = validatedData.title;
-    if (validatedData.department !== undefined) updateData.department = validatedData.department;
-    if (validatedData.location !== undefined) updateData.location = validatedData.location;
-    if (validatedData.employmentType !== undefined) updateData.employmentType = validatedData.employmentType;
-    if (validatedData.experienceLevel !== undefined) updateData.experienceLevel = validatedData.experienceLevel;
-    if (validatedData.description !== undefined) updateData.description = validatedData.description;
-    if (validatedData.requirements !== undefined) updateData.requirements = JSON.stringify(validatedData.requirements);
-    if (validatedData.responsibilities !== undefined) updateData.responsibilities = JSON.stringify(validatedData.responsibilities);
-    if (validatedData.benefits !== undefined) updateData.benefits = JSON.stringify(validatedData.benefits);
-    if (validatedData.salaryRange !== undefined) updateData.salaryRange = validatedData.salaryRange;
-    if (validatedData.isActive !== undefined) updateData.isActive = validatedData.isActive;
+      if (validatedData.title !== undefined) updateData.title = validatedData.title;
+      if (validatedData.department !== undefined) updateData.department = validatedData.department;
+      if (validatedData.location !== undefined) updateData.location = validatedData.location;
+      if (validatedData.employmentType !== undefined) updateData.employmentType = validatedData.employmentType;
+      if (validatedData.experienceLevel !== undefined) updateData.experienceLevel = validatedData.experienceLevel;
+      if (validatedData.description !== undefined) updateData.description = validatedData.description;
+      if (validatedData.requirements !== undefined) updateData.requirements = JSON.stringify(validatedData.requirements);
+      if (validatedData.responsibilities !== undefined) updateData.responsibilities = JSON.stringify(validatedData.responsibilities);
+      if (validatedData.benefits !== undefined) updateData.benefits = JSON.stringify(validatedData.benefits);
+      if (validatedData.salaryRange !== undefined) updateData.salaryRange = validatedData.salaryRange;
+      if (validatedData.isActive !== undefined) updateData.isActive = validatedData.isActive;
 
-    const [updatedJobPost] = await db
-      .update(jobPost)
-      .set(updateData)
-      .where(eq(jobPost.id, resolvedParams.id))
-      .returning();
+      const [updated] = await tx
+        .update(jobPost)
+        .set(updateData)
+        .where(eq(jobPost.id, resolvedParams.id))
+        .returning();
+
+      return updated;
+    });
 
     // Parse JSON fields for response
     const responseJobPost = {
@@ -154,6 +129,14 @@ export async function PUT(
       );
     }
 
+    // Handle custom errors
+    if (error instanceof Error && error.message === 'Job post not found') {
+      return NextResponse.json(
+        { error: error.message },
+        { status: 404 }
+      );
+    }
+
     console.error('Error updating job post:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
@@ -162,47 +145,52 @@ export async function PUT(
   }
 }
 
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+async function deleteJobPost(
+  request: AuthenticatedRequest,
+  { params }: { params: Promise<Record<string, string>>; }
 ) {
-  const session = await auth.api.getSession({
-    headers: await headers()
-  });
-
-  if (!session) {
-    return NextResponse.json(
-      { error: "Unauthorized" },
-      { status: 401 }
-    );
-  }
-
   try {
     const resolvedParams = await params;
-    // Check if job post exists and belongs to user
-    const [existingPost] = await db
-      .select()
-      .from(jobPost)
-      .where(and(
-        eq(jobPost.id, resolvedParams.id),
-        eq(jobPost.userId, session.user.id)
-      ))
-      .limit(1);
 
-    if (!existingPost) {
-      return NextResponse.json(
-        { error: 'Job post not found' },
-        { status: 404 }
-      );
-    }
+    // Use transaction to ensure atomicity
+    await withTransaction(async (tx) => {
+      // Check if job post exists and belongs to user
+      const [existingPost] = await tx
+        .select()
+        .from(jobPost)
+        .where(
+          withNotDeleted(
+            jobPost.deletedAt,
+            eq(jobPost.id, resolvedParams.id),
+            eq(jobPost.userId, request.user.id)
+          )
+        )
+        .limit(1);
 
-    await db.delete(jobPost).where(eq(jobPost.id, resolvedParams.id));
+      if (!existingPost) {
+        throw new Error('Job post not found');
+      }
+
+      // Soft delete the job post
+      await tx
+        .update(jobPost)
+        .set(softDeleteData())
+        .where(eq(jobPost.id, resolvedParams.id));
+    });
 
     return NextResponse.json({
       success: true,
       message: 'Job post deleted successfully',
     });
   } catch (error) {
+    // Handle custom errors
+    if (error instanceof Error && error.message === 'Job post not found') {
+      return NextResponse.json(
+        { error: error.message },
+        { status: 404 }
+      );
+    }
+
     console.error('Error deleting job post:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
@@ -210,3 +198,8 @@ export async function DELETE(
     );
   }
 }
+
+// Export authenticated route handlers
+export const GET = withAuthParams(getJobPost);
+export const PUT = withAuthParams(updateJobPost);
+export const DELETE = withAuthParams(deleteJobPost);
