@@ -7,6 +7,8 @@ export type ExtractedData = {
   email: string;
   template?: EmailTemplate;
   jobPosition?: string;
+  resumeId?: string; // ID of the resume record in database
+  applicantId?: string; // ID of the applicant record in database
   error?: string; // For failed extractions
 };
 
@@ -64,6 +66,7 @@ export const resumeFileSchema = z.object({
   filePath: z.string(),
   fileSize: z.number().nullable(),
   mimeType: z.string().nullable(),
+  fileHash: z.string().nullable(),
   resumeContent: z.string().nullable(),
   extractionStatus: z.enum(EXTRACTION_STATUS),
   extractionError: z.string().nullable(),
@@ -77,6 +80,7 @@ export const createResumeFileSchema = z.object({
   filePath: z.string().min(1, 'File path is required'),
   fileSize: z.number().positive().optional(),
   mimeType: z.string().optional(),
+  fileHash: z.string().optional(),
   resumeContent: z.string().optional(),
   extractionStatus: z.enum(EXTRACTION_STATUS).optional(),
   extractionError: z.string().optional(),
@@ -116,25 +120,18 @@ export const createEmailCommunicationSchema = z.object({
 
 export const emailRequestSchema = z.object({
   recipients: z.array(z.object({
-    fileName: z.string().min(1, 'File name is required'),
     firstName: z.string().min(1, 'First name is required'),
     lastName: z.string().min(1, 'Last name is required'),
     email: z.string().email('Valid email is required'),
     template: z.string().optional(),
     jobPosition: z.string().optional(),
+    applicantId: z.string().min(1, 'Applicant ID is required'), // Required for updating applicant
   })).min(1, 'At least one recipient is required'),
   jobPostId: z.string().optional(),
-  resumeData: z.record(z.string()).optional(), // fileName -> resumeContent mapping (for backward compatibility)
-  resumeFiles: z.record(z.object({
-    fileBuffer: z.string(), // Base64 encoded file buffer
-    mimeType: z.string(),
-    fileSize: z.number(),
-  })).optional(), // fileName -> file data mapping (for R2 upload)
 });
 
 export const emailPreviewRequestSchema = z.object({
   recipients: z.array(z.object({
-    fileName: z.string().min(1, 'File name is required'),
     firstName: z.string().min(1, 'First name is required'),
     lastName: z.string().min(1, 'Last name is required'),
     email: z.string().email('Valid email is required'),
@@ -146,9 +143,49 @@ export const emailPreviewRequestSchema = z.object({
 
 export const SUPPORTED_FILE_TYPES = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'] as const;
 
+// Extraction schema for Mistral OCR - this matches what we want to extract from resumes
+export const resumeExtractionSchema = z.object({
+  firstName: z.string().describe("The first name of the candidate."),
+  lastName: z.string().describe("The last name of the candidate."),
+  email: z.string().email().describe("The email address of the candidate."),
+  phone: z.string().optional().describe("The phone number of the candidate."),
+  linkedinUrl: z.string().url().optional().describe("The LinkedIn profile URL of the candidate."),
+  githubUrl: z.string().url().optional().describe("The GitHub profile URL of the candidate."),
+  portfolioUrl: z.string().url().optional().describe("The portfolio website URL of the candidate."),
+  extractedText: z.string().describe("The full text content extracted from the resume."),
+  skills: z.array(z.string()).optional().describe("List of skills mentioned in the resume."),
+  experience: z.array(z.object({
+    company: z.string(),
+    position: z.string(),
+    duration: z.string().optional(),
+    description: z.string().optional()
+  })).optional().describe("Work experience from the resume."),
+  education: z.array(z.object({
+    institution: z.string(),
+    degree: z.string().optional(),
+    fieldOfStudy: z.string().optional(),
+    graduationYear: z.string().optional()
+  })).optional().describe("Educational background from the resume.")
+});
+
+// Response schema for the extraction API
+export const extractionResponseSchema = z.object({
+  fileName: z.string(),
+  resumeId: z.string().optional(), // Will be present on successful extraction
+  applicantId: z.string().optional(), // Will be present on successful extraction
+  firstName: z.string().optional(),
+  lastName: z.string().optional(),
+  email: z.string().optional(),
+  template: z.enum(['acknowledgment', 'screening']).optional(),
+  jobPosition: z.string().optional(),
+  error: z.string().optional(), // Will be present on failed extraction
+});
+
 // Inferred types from Zod schemas
 export type Applicant = z.infer<typeof applicantSchema>;
 export type CreateApplicantData = z.infer<typeof createApplicantSchema>;
+export type ResumeExtractionData = z.infer<typeof resumeExtractionSchema>;
+export type ExtractionResponseData = z.infer<typeof extractionResponseSchema>;
 export type UpdateApplicantData = z.infer<typeof updateApplicantSchema>;
 
 export type ResumeFile = z.infer<typeof resumeFileSchema>;

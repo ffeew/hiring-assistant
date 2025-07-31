@@ -135,6 +135,7 @@ export const resumeFile = sqliteTable("resume_file", {
   filePath: text("file_path").notNull(), // Path to the file in Cloudflare R2
   fileSize: integer("file_size"), // File size in bytes
   mimeType: text("mime_type"), // MIME type of the uploaded file
+  fileHash: text("file_hash"), // SHA-256 hash of file content for deduplication
   resumeContent: text("resume_content"), // Extracted resume content in markdown format (optional)
   extractionStatus: text("extraction_status") // pending, success, failed
     .$defaultFn(() => "pending")

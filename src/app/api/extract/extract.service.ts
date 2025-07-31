@@ -1,22 +1,15 @@
 import { Mistral } from '@mistralai/mistralai';
-import { z } from 'zod';
 import { responseFormatFromZodObject } from '@mistralai/mistralai/extra/structChat.js';
 import { env } from '@/lib/env';
 import { ResponseFormat } from '@mistralai/mistralai/models/components/responseformat';
 import { randomUUID } from 'node:crypto';
-import { SUPPORTED_FILE_TYPES } from '@/app/types';
+import { SUPPORTED_FILE_TYPES, resumeExtractionSchema, type ResumeExtractionData } from '@/app/types';
 
 const client = new Mistral({ apiKey: env.MISTRAL_API_KEY });
 
-const ResumeExtractionForEmailSchema = z.object({
-  firstName: z.string().describe("The first name of the candidate."),
-  lastName: z.string().describe("The last name of the candidate."),
-  email: z.string().describe("The email address of the candidate."),
-});
 
 
-
-export async function extractContactInfoFromResume(fileBuffer: Buffer, fileType: typeof SUPPORTED_FILE_TYPES[number]) {
+export async function extractResumeData(fileBuffer: Buffer, fileType: typeof SUPPORTED_FILE_TYPES[number]): Promise<ResumeExtractionData> {
   if (!SUPPORTED_FILE_TYPES.includes(fileType)) {
     throw new Error(`Unsupported file type: ${fileType}`);
   }
@@ -25,16 +18,19 @@ export async function extractContactInfoFromResume(fileBuffer: Buffer, fileType:
     const response = await extractInformationFromFile({
       fileBuffer,
       fileType,
-      annotationFormat: responseFormatFromZodObject(ResumeExtractionForEmailSchema),
+      annotationFormat: responseFormatFromZodObject(resumeExtractionSchema),
     });
 
     if (!response.documentAnnotation) {
       throw new Error("No document annotation found in the response.");
     }
 
-    return JSON.parse(response.documentAnnotation) as z.infer<typeof ResumeExtractionForEmailSchema>;
+    const extractedData = JSON.parse(response.documentAnnotation);
+    
+    // Validate the extracted data against our schema
+    return resumeExtractionSchema.parse(extractedData);
   } catch (error) {
-    console.error("Error extracting contact info from resume:", error);
+    console.error("Error extracting resume data:", error);
     throw error;
   }
 }

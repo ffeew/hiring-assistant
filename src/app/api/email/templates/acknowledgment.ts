@@ -55,7 +55,7 @@ export function generateAcknowledgmentTemplate(recipient: EmailData, userConfig:
       <div class="content">
         <p>Dear ${recipient.firstName} ${recipient.lastName},</p>
         
-        <p>Thank you for submitting your resume (<strong>${recipient.fileName}</strong>) for consideration. We have received your application and our hiring team is currently reviewing it.</p>
+        <p>Thank you for submitting your resume for consideration. We have received your application and our hiring team is currently reviewing it.</p>
         
         <div class="highlight">
           <strong>What happens next?</strong>

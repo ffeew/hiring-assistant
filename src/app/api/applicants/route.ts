@@ -4,7 +4,7 @@ import { withTransaction } from '@/lib/db/transaction';
 import { applicant as applicantTable } from '@/lib/db/schema';
 import { eq, desc } from 'drizzle-orm';
 import { APPLICANT_STATUS, createApplicantSchema } from '@/app/types';
-import { nanoid } from 'nanoid';
+import { randomUUID } from 'node:crypto';
 import { ZodError } from 'zod';
 import { withAuth, AuthenticatedRequest } from '@/lib/auth-middleware';
 import { withNotDeleted } from '@/lib/soft-delete';
@@ -96,7 +96,7 @@ async function createApplicant(request: AuthenticatedRequest) {
       const [createdApplicant] = await tx
         .insert(applicantTable)
         .values({
-          id: nanoid(),
+          id: randomUUID(),
           userId: request.user.id,
           jobPostId: jobPostId || null,
           firstName,

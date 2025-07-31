@@ -6,7 +6,7 @@ import { createJobPostSchema } from '@/app/types';
 import { z } from 'zod';
 import { withAuth, AuthenticatedRequest } from '@/lib/auth-middleware';
 import { withNotDeleted } from '@/lib/soft-delete';
-import { nanoid } from 'nanoid';
+import { randomUUID } from 'node:crypto';
 
 async function getJobPosts(request: AuthenticatedRequest) {
 
@@ -54,7 +54,7 @@ async function createJobPost(request: AuthenticatedRequest) {
     const validatedData = createJobPostSchema.parse(body);
 
     const newJobPost = {
-      id: nanoid(),
+      id: randomUUID(),
       userId: request.user.id,
       title: validatedData.title,
       department: validatedData.department || null,

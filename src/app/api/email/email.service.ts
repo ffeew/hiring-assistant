@@ -10,7 +10,6 @@ export interface EmailData {
   firstName: string;
   lastName: string;
   email: string;
-  fileName: string;
   template?: EmailTemplate;
   jobPosition?: string;
 }

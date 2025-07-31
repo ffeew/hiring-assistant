@@ -71,7 +71,7 @@ export function useHiringAssistant() {
   };
 
   const handleSendEmails = async () => {
-    const successfulExtractions = extractedData.filter(data => !data.error);
+    const successfulExtractions = extractedData.filter(data => !data.error && data.resumeId && data.applicantId);
     if (successfulExtractions.length === 0) {
       alert("No successful extractions to send emails to.");
       return;
@@ -87,9 +87,14 @@ export function useHiringAssistant() {
         },
         body: JSON.stringify({
           recipients: successfulExtractions.map(data => ({
-            ...data,
+            firstName: data.firstName,
+            lastName: data.lastName,
+            email: data.email,
+            template: data.template,
             jobPosition: selectedJobPost?.title || customJobPosition,
+            applicantId: data.applicantId!,
           })),
+          jobPostId: selectedJobPost?.id,
         }),
       });
 
@@ -141,7 +146,10 @@ export function useHiringAssistant() {
         },
         body: JSON.stringify({
           recipients: successfulExtractions.map(data => ({
-            ...data,
+            firstName: data.firstName,
+            lastName: data.lastName,
+            email: data.email,
+            template: data.template,
             jobPosition: selectedJobPost?.title || customJobPosition,
           })),
         }),

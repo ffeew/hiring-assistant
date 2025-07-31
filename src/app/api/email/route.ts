@@ -2,14 +2,13 @@ import { NextResponse } from 'next/server';
 import { EmailService, EmailData, UserEmailConfig } from './email.service';
 import { safeDecrypt } from '@/lib/crypto';
 import { withTransaction } from '@/lib/db/transaction';
-import { applicant as applicantTable, resumeFile as resumeFileTable, emailCommunication as emailCommunicationTable } from '@/lib/db/schema';
+import { applicant as applicantTable, emailCommunication as emailCommunicationTable } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
-import { nanoid } from 'nanoid';
-import { emailRequestSchema, SUPPORTED_FILE_TYPES } from '@/app/types';
+import { randomUUID } from 'node:crypto';
+import { emailRequestSchema } from '@/app/types';
 import { ZodError } from 'zod';
-import { r2Service } from '@/lib/r2';
 import { withAuth, AuthenticatedRequest } from '@/lib/auth-middleware';
-import { withNotDeleted } from '@/lib/soft-delete';
+import { updateApplicantFields } from '../extract/resume-extraction.service';
 
 async function sendEmails(request: AuthenticatedRequest) {
   try {
@@ -17,7 +16,7 @@ async function sendEmails(request: AuthenticatedRequest) {
 
     // Validate request body with Zod
     const validatedData = emailRequestSchema.parse(body);
-    const { recipients, jobPostId, resumeData, resumeFiles } = validatedData;
+    const { recipients, jobPostId } = validatedData;
 
     // Check if user has email configuration
     if (!request.user.gmailAddress || !request.user.gmailAppPassword || !request.user.name) {
@@ -49,155 +48,37 @@ async function sendEmails(request: AuthenticatedRequest) {
       );
     }
 
-    // Create applicants and save resume data before sending emails
-    const applicantIds: string[] = [];
+    // Send emails to pre-extracted applicants
     const emailResults = { success: 0, failed: 0, errors: [] as string[] };
 
     for (const recipient of recipients) {
       try {
-        // Process each recipient in a transaction to ensure data consistency
-        const { applicantId } = await withTransaction(async (tx) => {
-          // Check if applicant already exists (excluding soft-deleted)
-          const existingApplicant = await tx
-            .select()
-            .from(applicantTable)
-            .where(
-              withNotDeleted(
-                applicantTable.deletedAt,
-                eq(applicantTable.userId, request.user.id),
-                eq(applicantTable.email, recipient.email)
-              )
-            )
-            .limit(1);
-
-          let applicantId: string;
-
-          if (existingApplicant.length > 0) {
-            // Update existing applicant
-            applicantId = existingApplicant[0].id;
-
-            // Update job post association if provided
-            if (jobPostId) {
-              await tx
-                .update(applicantTable)
-                .set({
-                  jobPostId,
-                  updatedAt: new Date(),
-                })
-                .where(eq(applicantTable.id, applicantId));
-            }
-          } else {
-            // Create new applicant
-            applicantId = nanoid();
-            await tx
-              .insert(applicantTable)
-              .values({
-                id: applicantId,
-                userId: request.user.id,
-                jobPostId: jobPostId || null,
-                firstName: recipient.firstName,
-                lastName: recipient.lastName,
-                email: recipient.email,
-                phone: null,
-                linkedinUrl: null,
-                githubUrl: null,
-                portfolioUrl: null,
-                metadata: null,
-                notes: null,
-                status: 'applied',
-                source: 'bulk_upload',
-                createdAt: new Date(),
-                updatedAt: new Date(),
-              });
-          }
-
-          // Handle resume file upload to R2 or save content directly
-          const resumeFileData = resumeFiles?.[recipient.fileName];
-          const resumeContent = resumeData?.[recipient.fileName];
-
-          if (resumeFileData || resumeContent) {
-            // Check if resume file already exists (excluding soft-deleted)
-            const existingResume = await tx
-              .select()
-              .from(resumeFileTable)
-              .where(
-                withNotDeleted(
-                  resumeFileTable.deletedAt,
-                  eq(resumeFileTable.applicantId, applicantId),
-                  eq(resumeFileTable.fileName, recipient.fileName)
-                )
-              )
-              .limit(1);
-
-            if (existingResume.length === 0) {
-              let filePath: string | null = null;
-              let fileSize: number | null = null;
-              let mimeType: string | null = null;
-
-              // If file data is provided, upload to R2
-              if (resumeFileData) {
-                try {
-                  // Validate file type
-                  if (!SUPPORTED_FILE_TYPES.includes(resumeFileData.mimeType as typeof SUPPORTED_FILE_TYPES[number])) {
-                    throw new Error(`Unsupported file type: ${resumeFileData.mimeType}`);
-                  }
-
-                  // Validate file size (10MB limit)
-                  const maxSize = 10 * 1024 * 1024; // 10MB
-                  if (resumeFileData.fileSize > maxSize) {
-                    throw new Error('File too large. Maximum size is 10MB.');
-                  }
-
-                  // Convert base64 to buffer
-                  const fileBuffer = Buffer.from(resumeFileData.fileBuffer, 'base64');
-
-                  // Upload to R2
-                  const uploadResult = await r2Service.uploadFile(
-                    fileBuffer,
-                    recipient.fileName,
-                    resumeFileData.mimeType,
-                    request.user.id
-                  );
-
-                  console.log(`Uploaded resume for ${recipient.email}:`, uploadResult);
-
-                  filePath = uploadResult.filePath;
-                  fileSize = resumeFileData.fileSize;
-                  mimeType = resumeFileData.mimeType;
-                } catch (uploadError) {
-                  console.error(`Failed to upload resume for ${recipient.email}:`, uploadError);
-                  emailResults.errors.push(`Failed to upload resume for ${recipient.email}: ${uploadError}`);
-                  // Continue with email sending even if file upload fails
-                }
-              }
-
-              // Save resume file record to database
-              await tx
-                .insert(resumeFileTable)
-                .values({
-                  id: nanoid(),
-                  applicantId,
-                  fileName: recipient.fileName,
-                  filePath: filePath || `legacy/${recipient.fileName}`, // Fallback path for content-only resumes
-                  fileSize: fileSize,
-                  mimeType: mimeType,
-                  resumeContent: resumeContent || null, // Store content if provided
-                  extractionStatus: resumeContent ? 'success' : (filePath ? 'pending' : 'failed'),
-                  extractionError: filePath ? null : (resumeContent ? null : 'File upload failed'),
-                  createdAt: new Date(),
-                });
-            }
-          }
-
-          // Return applicantId for external email sending
-          return { applicantId };
+        // Update applicant fields with corrected data from frontend
+        await updateApplicantFields(recipient.applicantId, {
+          firstName: recipient.firstName,
+          lastName: recipient.lastName,
+          email: recipient.email,
         });
 
-        // Send email after transaction is committed
+
+        // Update job post association if provided
+        if (jobPostId) {
+          await withTransaction(async (tx) => {
+            await tx
+              .update(applicantTable)
+              .set({
+                jobPostId,
+                updatedAt: new Date(),
+              })
+              .where(eq(applicantTable.id, recipient.applicantId));
+          });
+        }
+
+        // Send email
         const emailSent = await emailService.sendEmail(recipient as EmailData);
 
         if (emailSent) {
-          // Log successful email communication in a separate transaction
+          // Log successful email communication
           await withTransaction(async (tx) => {
             const emailContent = emailService.generateEmailTemplate(recipient as EmailData);
             const companyName = userConfig.companyName || 'Our Company';
@@ -210,9 +91,9 @@ async function sendEmails(request: AuthenticatedRequest) {
             await tx
               .insert(emailCommunicationTable)
               .values({
-                id: nanoid(),
+                id: randomUUID(),
                 userId: request.user.id,
-                applicantId,
+                applicantId: recipient.applicantId,
                 jobPostId: jobPostId || null,
                 emailType: emailType as 'acknowledgment' | 'screening',
                 subject,
@@ -228,8 +109,6 @@ async function sendEmails(request: AuthenticatedRequest) {
           emailResults.failed++;
           emailResults.errors.push(`Failed to send email to ${recipient.email}`);
         }
-
-        applicantIds.push(applicantId);
 
         // Add delay between emails
         await new Promise(resolve => setTimeout(resolve, 1000));
@@ -247,7 +126,6 @@ async function sendEmails(request: AuthenticatedRequest) {
         totalSent: emailResults.success,
         totalFailed: emailResults.failed,
         errors: emailResults.errors,
-        applicantsCreated: applicantIds.length,
       },
     });
   } catch (error) {

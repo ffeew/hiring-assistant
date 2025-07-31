@@ -3,7 +3,7 @@ import { db } from '@/lib/db/db';
 import { withTransaction } from '@/lib/db/transaction';
 import { resumeFile as resumeFileTable } from '@/lib/db/schema';
 import { r2Service } from '@/lib/r2';
-import { nanoid } from 'nanoid';
+import { randomUUID } from 'node:crypto';
 import { SUPPORTED_FILE_TYPES } from '@/app/types';
 import { eq } from 'drizzle-orm';
 import { withAuth, AuthenticatedRequest } from '@/lib/auth-middleware';
@@ -61,7 +61,7 @@ async function uploadResumeFile(request: AuthenticatedRequest) {
       );
 
       // Save file record to database
-      const resumeFileId = nanoid();
+      const resumeFileId = randomUUID();
       const [newResumeFile] = await tx
         .insert(resumeFileTable)
         .values({
