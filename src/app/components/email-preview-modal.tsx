@@ -1,16 +1,11 @@
 "use client";
 
 import { LoadingSpinner } from "./loading-spinner";
-import type { ExtractedData } from "../types";
+import type { EmailPreviewResponse } from "@/lib/api-client";
 import { EmailTemplate } from "../types";
 
 type EmailPreviewModalProps = {
-	emailPreviews: {
-		html: string;
-		subject: string;
-		recipient: ExtractedData;
-		template?: EmailTemplate;
-	}[];
+	emailPreviews: EmailPreviewResponse['previews'];
 	isLoading: boolean;
 	onClose: () => void;
 	onSendEmails: () => void;

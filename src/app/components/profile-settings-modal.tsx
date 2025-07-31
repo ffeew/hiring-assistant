@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from "react";
 import type { Session } from "@/lib/auth";
+import { useUpdateProfileMutation } from "@/app/hooks/use-api-mutations";
+import type { ProfileUpdateData } from "@/app/types";
 
 type User = Session["user"];
 
@@ -24,9 +26,11 @@ export function ProfileSettingsModal({
 		companyName: user.companyName || "",
 		jobTitle: user.jobTitle || "",
 	});
-	const [isLoading, setIsLoading] = useState(false);
 	const [error, setError] = useState("");
 	const [success, setSuccess] = useState("");
+
+	// React Query mutation
+	const updateProfileMutation = useUpdateProfileMutation();
 
 	useEffect(() => {
 		if (isOpen) {
@@ -44,31 +48,22 @@ export function ProfileSettingsModal({
 
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
-		setIsLoading(true);
 		setError("");
 		setSuccess("");
 
 		try {
-			const response = await fetch("/api/profile", {
-				method: "PATCH",
-				headers: {
-					"Content-Type": "application/json",
-				},
-				body: JSON.stringify(formData),
-			});
+			const payload: ProfileUpdateData = {
+				gmailAddress: formData.gmailAddress,
+				gmailAppPassword: formData.gmailAppPassword,
+				companyName: formData.companyName || undefined,
+				jobTitle: formData.jobTitle || undefined,
+			};
 
-			if (!response.ok) {
-				const errorData = await response.json();
-				throw new Error(errorData.error || "Failed to update profile");
-			}
-
-			const { user: updatedUser } = await response.json();
-			onUpdate(updatedUser);
+			const updatedUser = await updateProfileMutation.mutateAsync(payload);
+			onUpdate(updatedUser as User);
 			setSuccess("Profile updated successfully!");
 		} catch (err) {
 			setError(err instanceof Error ? err.message : "An error occurred");
-		} finally {
-			setIsLoading(false);
 		}
 	};
 
@@ -222,10 +217,10 @@ export function ProfileSettingsModal({
 							</button>
 							<button
 								type="submit"
-								disabled={isLoading}
+								disabled={updateProfileMutation.isPending}
 								className="flex-1 px-4 py-2 text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
 							>
-								{isLoading ? "Saving..." : "Save Changes"}
+								{updateProfileMutation.isPending ? "Saving..." : "Save Changes"}
 							</button>
 						</div>
 					</form>

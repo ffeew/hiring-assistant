@@ -126,6 +126,7 @@ export const emailRequestSchema = z.object({
     template: z.string().optional(),
     jobPosition: z.string().optional(),
     applicantId: z.string().min(1, 'Applicant ID is required'), // Required for updating applicant
+    resumeId: z.string().min(1, 'Resume ID is required'), // Required for updating resume fields
   })).min(1, 'At least one recipient is required'),
   jobPostId: z.string().optional(),
 });
@@ -244,3 +245,29 @@ export const updateJobPostSchema = createJobPostSchema.extend({
 export type JobPost = z.infer<typeof jobPostSchema>;
 export type CreateJobPostData = z.infer<typeof createJobPostSchema>;
 export type UpdateJobPostData = z.infer<typeof updateJobPostSchema>;
+
+// Profile schemas
+export const profileUpdateSchema = z.object({
+  gmailAddress: z.string().email('Valid Gmail address is required'),
+  gmailAppPassword: z.string().min(1, 'Gmail app password is required'),
+  companyName: z.string().optional(),
+  jobTitle: z.string().optional(),
+});
+
+export const profileResponseSchema = z.object({
+  id: z.string(),
+  email: z.string().email(),
+  name: z.string().nullable(),
+  image: z.string().nullable(),
+  gmailAddress: z.string().nullable(),
+  gmailAppPassword: z.string().nullable(), // Will be masked as "****"
+  companyName: z.string().nullable(),
+  jobTitle: z.string().nullable(),
+  emailVerified: z.boolean().nullable(),
+  createdAt: z.date(),
+  updatedAt: z.date(),
+});
+
+// Inferred profile types
+export type ProfileUpdateData = z.infer<typeof profileUpdateSchema>;
+export type ProfileResponseData = z.infer<typeof profileResponseSchema>;
