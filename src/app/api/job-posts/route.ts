@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db/db';
-import { withTransaction } from '@/lib/db/transaction';
 import { jobPost } from '@/lib/db/schema';
 import { eq, desc } from 'drizzle-orm';
 import { createJobPostSchema } from '@/app/types';
