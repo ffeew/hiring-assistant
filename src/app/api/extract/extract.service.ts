@@ -3,13 +3,13 @@ import { responseFormatFromZodObject } from '@mistralai/mistralai/extra/structCh
 import { env } from '@/lib/env';
 import { ResponseFormat } from '@mistralai/mistralai/models/components/responseformat';
 import { randomUUID } from 'node:crypto';
-import { SUPPORTED_FILE_TYPES, resumeExtractionSchema, type ResumeExtractionData } from '@/app/types';
+import { SUPPORTED_FILE_TYPES, mistralExtractionSchema, resumeExtractionSchema, type ResumeExtractionData } from '@/app/types';
 
 const client = new Mistral({ apiKey: env.MISTRAL_API_KEY });
 
 
 
-export async function extractResumeData(fileBuffer: Buffer, fileType: typeof SUPPORTED_FILE_TYPES[number]): Promise<ResumeExtractionData> {
+export async function extractResumeData(fileBuffer: Buffer, fileType: typeof SUPPORTED_FILE_TYPES[number]): Promise<{ extractedText: string; structuredResumeData: ResumeExtractionData; }> {
   if (!SUPPORTED_FILE_TYPES.includes(fileType)) {
     throw new Error(`Unsupported file type: ${fileType}`);
   }
@@ -18,7 +18,7 @@ export async function extractResumeData(fileBuffer: Buffer, fileType: typeof SUP
     const response = await extractInformationFromFile({
       fileBuffer,
       fileType,
-      annotationFormat: responseFormatFromZodObject(resumeExtractionSchema),
+      annotationFormat: responseFormatFromZodObject(mistralExtractionSchema),
     });
 
     if (!response.documentAnnotation) {
@@ -26,9 +26,19 @@ export async function extractResumeData(fileBuffer: Buffer, fileType: typeof SUP
     }
 
     const extractedData = JSON.parse(response.documentAnnotation);
-    
-    // Validate the extracted data against our schema
-    return resumeExtractionSchema.parse(extractedData);
+
+    // First validate with Mistral schema to ensure basic structure
+    const mistralValidatedData = mistralExtractionSchema.parse(extractedData);
+
+    // Then validate with full schema (this will validate email/URL formats)
+    // If validation fails, we'll still return the Mistral data but log the validation errors
+    try {
+      return { extractedText: response.pages.map(page => page.markdown).join("\n---\n"), structuredResumeData: resumeExtractionSchema.parse(mistralValidatedData) };
+    } catch (validationError) {
+      console.warn("Resume data failed full validation, but will proceed with basic validation:", validationError);
+      // Return the Mistral-validated data as ResumeExtractionData
+      return { extractedText: response.pages.map(page => page.markdown).join("\n---\n"), structuredResumeData: mistralValidatedData as ResumeExtractionData };
+    }
   } catch (error) {
     console.error("Error extracting resume data:", error);
     throw error;

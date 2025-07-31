@@ -26,10 +26,10 @@ async function extractResumes(request: AuthenticatedRequest) {
         }
 
         const fileBuffer = Buffer.from(await file.arrayBuffer());
-        
+
         // Check for duplicate resume before processing
         const duplicateCheck = await checkForDuplicateResume(request.user.id, fileBuffer);
-        
+
         if (duplicateCheck.isDuplicate) {
           // Return existing resume data without processing
           return {
@@ -42,10 +42,10 @@ async function extractResumes(request: AuthenticatedRequest) {
             template: 'screening',
           };
         }
-        
+
         // Extract resume data using Mistral OCR
-        const extractedInfo = await extractResumeData(fileBuffer, file.type as typeof SUPPORTED_FILE_TYPES[number]);
-        
+        const { extractedText, structuredResumeData } = await extractResumeData(fileBuffer, file.type as typeof SUPPORTED_FILE_TYPES[number]);
+
         // Upload file to R2
         const uploadResult = await r2Service.uploadFile(
           fileBuffer,
@@ -55,7 +55,7 @@ async function extractResumes(request: AuthenticatedRequest) {
         );
 
         // Find or create applicant based on email
-        const applicantId = await findOrCreateApplicant(request.user.id, extractedInfo);
+        const applicantId = await findOrCreateApplicant(request.user.id, structuredResumeData);
 
         // Create resume record in database with file hash
         const resumeId = await createResumeRecord(
@@ -64,7 +64,7 @@ async function extractResumes(request: AuthenticatedRequest) {
           uploadResult.filePath,
           file.size,
           file.type,
-          extractedInfo.extractedText,
+          extractedText,
           duplicateCheck.fileHash
         );
 
@@ -72,9 +72,9 @@ async function extractResumes(request: AuthenticatedRequest) {
           fileName: file.name,
           resumeId,
           applicantId,
-          firstName: extractedInfo.firstName,
-          lastName: extractedInfo.lastName,
-          email: extractedInfo.email,
+          firstName: structuredResumeData.firstName,
+          lastName: structuredResumeData.lastName,
+          email: structuredResumeData.email,
           template: 'screening', // Default template
         };
       })

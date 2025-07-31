@@ -144,7 +144,32 @@ export const emailPreviewRequestSchema = z.object({
 
 export const SUPPORTED_FILE_TYPES = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'] as const;
 
-// Extraction schema for Mistral OCR - this matches what we want to extract from resumes
+// Mistral-compatible extraction schema (without format validations that cause API errors)
+export const mistralExtractionSchema = z.object({
+  firstName: z.string().describe("The first name of the candidate."),
+  lastName: z.string().describe("The last name of the candidate."),
+  email: z.string().describe("The email address of the candidate."),
+  phone: z.string().optional().describe("The phone number of the candidate."),
+  linkedinUrl: z.string().optional().describe("The LinkedIn profile URL of the candidate."),
+  githubUrl: z.string().optional().describe("The GitHub profile URL of the candidate."),
+  portfolioUrl: z.string().optional().describe("The portfolio website URL of the candidate."),
+  extractedText: z.string().describe("The full text content extracted from the resume."),
+  skills: z.array(z.string()).optional().describe("List of skills mentioned in the resume."),
+  experience: z.array(z.object({
+    company: z.string().describe("The company or organization name where the candidate worked."),
+    position: z.string().describe("The job title or role held at this company."),
+    duration: z.string().optional().describe("The time period of employment (e.g., 'Jan 2020 - Dec 2022', '2 years', 'Present'). Extract as written in the resume."),
+    description: z.string().optional().describe("Brief description of responsibilities, achievements, or key points mentioned for this role.")
+  })).optional().describe("Work experience from the resume."),
+  education: z.array(z.object({
+    institution: z.string().describe("The name of the educational institution, university, college, or school."),
+    degree: z.string().optional().describe("The degree type or qualification obtained (e.g., 'Bachelor of Science', 'Master's', 'PhD', 'Certificate')."),
+    fieldOfStudy: z.string().optional().describe("The major, field of study, or subject area (e.g., 'Computer Science', 'Business Administration', 'Engineering')."),
+    graduationYear: z.string().optional().describe("The year of graduation or completion. Extract as a 4-digit year if available.")
+  })).optional().describe("Extract educational background including degrees, institutions, graduation dates, and fields of study. Include relevant certifications and academic achievements.")
+});
+
+// Full extraction schema with validation (for internal use after Mistral response)
 export const resumeExtractionSchema = z.object({
   firstName: z.string().describe("The first name of the candidate."),
   lastName: z.string().describe("The last name of the candidate."),
@@ -153,7 +178,6 @@ export const resumeExtractionSchema = z.object({
   linkedinUrl: z.string().url().optional().describe("The LinkedIn profile URL of the candidate."),
   githubUrl: z.string().url().optional().describe("The GitHub profile URL of the candidate."),
   portfolioUrl: z.string().url().optional().describe("The portfolio website URL of the candidate."),
-  extractedText: z.string().describe("The full text content extracted from the resume."),
   skills: z.array(z.string()).optional().describe("List of skills mentioned in the resume."),
   experience: z.array(z.object({
     company: z.string(),

@@ -5,10 +5,6 @@ import { randomUUID } from 'node:crypto';
 import { calculateFileHash } from '@/lib/hash';
 import { withNotDeleted } from '@/lib/soft-delete';
 import {
-  createApplicantSchema,
-  createResumeFileSchema,
-  type CreateApplicantData,
-  type CreateResumeFileData,
   type ResumeExtractionData
 } from '@/app/types';
 
@@ -37,8 +33,9 @@ export async function findOrCreateApplicant(
     education: extractedData.education,
   };
 
-  // Prepare applicant data and validate with schema
-  const applicantData: CreateApplicantData = {
+  await db.insert(applicant).values({
+    id: applicantId,
+    userId,
     firstName: extractedData.firstName,
     lastName: extractedData.lastName,
     email: extractedData.email,
@@ -46,19 +43,9 @@ export async function findOrCreateApplicant(
     linkedinUrl: extractedData.linkedinUrl || undefined,
     githubUrl: extractedData.githubUrl || undefined,
     portfolioUrl: extractedData.portfolioUrl || undefined,
-    metadata,
     status: 'applied',
     source: 'bulk_upload',
-  };
-
-  // Validate the data
-  const validatedData = createApplicantSchema.parse(applicantData);
-
-  await db.insert(applicant).values({
-    id: applicantId,
-    userId,
-    ...validatedData,
-    metadata: JSON.stringify(validatedData.metadata),
+    metadata: JSON.stringify(metadata),
   });
 
   return applicantId;
@@ -75,8 +62,8 @@ export async function createResumeRecord(
 ): Promise<string> {
   const resumeId = randomUUID();
 
-  // Prepare and validate resume file data
-  const resumeData: CreateResumeFileData = {
+  await db.insert(resumeFile).values({
+    id: resumeId,
     applicantId,
     fileName,
     filePath,
@@ -85,14 +72,6 @@ export async function createResumeRecord(
     fileHash,
     resumeContent: extractedText,
     extractionStatus: 'success',
-  };
-
-  // Validate the data
-  const validatedData = createResumeFileSchema.parse(resumeData);
-
-  await db.insert(resumeFile).values({
-    id: resumeId,
-    ...validatedData,
   });
 
   return resumeId;
