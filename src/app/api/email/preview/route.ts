@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 import { EmailService, EmailData, EmailTemplate, UserEmailConfig } from '../email.service';
 import { safeDecrypt } from '@/lib/crypto';
-import { emailPreviewRequestSchema } from '@/app/types';
+import { emailPreviewBodySchema } from '../email.validator';
+import { ZodError } from 'zod';
 import { withAuth, AuthenticatedRequest } from '@/lib/auth-middleware';
 
 async function generateEmailPreviews(request: AuthenticatedRequest) {
@@ -9,8 +10,8 @@ async function generateEmailPreviews(request: AuthenticatedRequest) {
   try {
     const body = await request.json();
 
-    // Validate request body with Zod
-    const validatedData = emailPreviewRequestSchema.parse(body);
+    // Validate request body
+    const validatedData = emailPreviewBodySchema.parse(body);
     const { recipients } = validatedData;
 
     // Check if user has email configuration
@@ -57,6 +58,16 @@ async function generateEmailPreviews(request: AuthenticatedRequest) {
     });
 
   } catch (error) {
+    if (error instanceof ZodError) {
+      return NextResponse.json(
+        {
+          error: 'Validation failed',
+          details: error.errors.map(e => ({ field: e.path.join('.'), message: e.message }))
+        },
+        { status: 400 }
+      );
+    }
+
     console.error('Error generating email previews:', error);
     return NextResponse.json(
       { error: 'Failed to generate email previews' },

@@ -3,7 +3,8 @@ import { responseFormatFromZodObject } from '@mistralai/mistralai/extra/structCh
 import { env } from '@/lib/env';
 import { ResponseFormat } from '@mistralai/mistralai/models/components/responseformat';
 import { randomUUID } from 'node:crypto';
-import { SUPPORTED_FILE_TYPES, mistralExtractionSchema, resumeExtractionSchema, type ResumeExtractionData } from '@/app/types';
+import { SUPPORTED_FILE_TYPES } from '@/app/types';
+import { mistralExtractionSchema, resumeExtractionSchema, type ResumeExtractionData } from './resume-extraction.validator';
 
 const client = new Mistral({ apiKey: env.MISTRAL_API_KEY });
 
@@ -74,7 +75,6 @@ async function extractInformationFromPdf(fileBuffer: Buffer, annotationFormat?: 
     console.error("Error processing PDF file:", error);
     throw error;
   }
-
 }
 
 async function extractInformationFromDocx(fileBuffer: Buffer, annotationFormat?: ResponseFormat) {

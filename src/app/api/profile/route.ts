@@ -1,58 +1,42 @@
 import { NextResponse } from 'next/server';
-import { db } from '@/lib/db/db';
-import { user as userTable } from '@/lib/db/schema';
-import { eq } from 'drizzle-orm';
-import { safeEncrypt } from '@/lib/crypto';
 import { withAuth, AuthenticatedRequest } from '@/lib/auth-middleware';
+import { ProfileService } from './profile.service';
+import { updateProfileBodySchema } from './profile.validator';
+import { ZodError } from 'zod';
 
 async function updateProfile(request: AuthenticatedRequest) {
-
   try {
     const body = await request.json();
-    const { gmailAddress, gmailAppPassword, companyName, jobTitle } = body;
 
-    // Validate required fields
-    if (!gmailAddress || !gmailAppPassword) {
+    // Validate request body
+    const validatedData = updateProfileBodySchema.parse(body);
+
+    // Update profile using service
+    const user = await ProfileService.updateProfile(request.user.id, validatedData);
+
+    return NextResponse.json({
+      success: true,
+      user,
+    });
+  } catch (error) {
+    if (error instanceof ZodError) {
       return NextResponse.json(
-        { error: 'Gmail address and app password are required' },
+        {
+          error: 'Validation failed',
+          details: error.errors.map(e => ({ field: e.path.join('.'), message: e.message }))
+        },
         { status: 400 }
       );
     }
 
-    // Encrypt password before storing
-    const encryptedPassword = gmailAppPassword ? safeEncrypt(gmailAppPassword) : gmailAppPassword;
-
-    // Update user profile in database
-    const [updatedUser] = await db
-      .update(userTable)
-      .set({
-        gmailAddress,
-        gmailAppPassword: encryptedPassword,
-        companyName: companyName || null,
-        jobTitle: jobTitle || null,
-        updatedAt: new Date(),
-      })
-      .where(eq(userTable.id, request.user.id))
-      .returning();
-
-    if (!updatedUser) {
+    // Handle business logic errors
+    if (error instanceof Error && error.message === 'Failed to update profile') {
       return NextResponse.json(
-        { error: 'Failed to update profile' },
+        { error: error.message },
         { status: 500 }
       );
     }
 
-    // Decrypt password for response (but don't send it back for security)
-    const userResponse = {
-      ...updatedUser,
-      gmailAppPassword: updatedUser.gmailAppPassword ? '****' : null, // Hide password in response
-    };
-
-    return NextResponse.json({
-      success: true,
-      user: userResponse,
-    });
-  } catch (error) {
     console.error('Error updating profile:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
@@ -63,30 +47,22 @@ async function updateProfile(request: AuthenticatedRequest) {
 
 async function getProfile(request: AuthenticatedRequest) {
   try {
-    const [userProfile] = await db
-      .select()
-      .from(userTable)
-      .where(eq(userTable.id, request.user.id))
-      .limit(1);
+    // Get profile using service
+    const user = await ProfileService.getProfile(request.user.id);
 
-    if (!userProfile) {
+    return NextResponse.json({
+      success: true,
+      user,
+    });
+  } catch (error) {
+    // Handle business logic errors
+    if (error instanceof Error && error.message === 'User not found') {
       return NextResponse.json(
-        { error: 'User not found' },
+        { error: error.message },
         { status: 404 }
       );
     }
 
-    // Decrypt password for internal use but hide it in response
-    const userResponse = {
-      ...userProfile,
-      gmailAppPassword: userProfile.gmailAppPassword ? '****' : null, // Hide password in response
-    };
-
-    return NextResponse.json({
-      success: true,
-      user: userResponse,
-    });
-  } catch (error) {
     console.error('Error fetching profile:', error);
     return NextResponse.json(
       { error: 'Internal server error' },

@@ -1,45 +1,37 @@
 import { NextResponse } from 'next/server';
-import { db } from '@/lib/db/db';
-import { jobPost } from '@/lib/db/schema';
-import { eq, desc } from 'drizzle-orm';
-import { createJobPostSchema } from '@/app/types';
 import { z } from 'zod';
 import { withAuth, AuthenticatedRequest } from '@/lib/auth-middleware';
-import { withNotDeleted } from '@/lib/soft-delete';
-import { randomUUID } from 'node:crypto';
+import { JobPostsService } from './job-posts.service';
+import { getJobPostsQuerySchema, createJobPostBodySchema } from './job-posts.validator';
 
 async function getJobPosts(request: AuthenticatedRequest) {
-
   try {
     const { searchParams } = new URL(request.url);
-    const activeOnly = searchParams.get('active') === 'true';
+    const queryParams = {
+      active: searchParams.get('active') || undefined,
+    };
 
-    const baseConditions = [eq(jobPost.userId, request.user.id)];
+    // Validate query parameters
+    const validatedQuery = getJobPostsQuerySchema.parse(queryParams);
 
-    if (activeOnly) {
-      baseConditions.push(eq(jobPost.isActive, true));
-    }
-
-    // Get job posts (excluding soft-deleted ones)
-    const jobPosts = await db
-      .select()
-      .from(jobPost)
-      .where(withNotDeleted(jobPost.deletedAt, ...baseConditions))
-      .orderBy(desc(jobPost.createdAt));
-
-    // Parse JSON fields
-    const parsedJobPosts = jobPosts.map(post => ({
-      ...post,
-      requirements: post.requirements ? JSON.parse(post.requirements) : [],
-      responsibilities: post.responsibilities ? JSON.parse(post.responsibilities) : [],
-      benefits: post.benefits ? JSON.parse(post.benefits) : [],
-    }));
+    // Get job posts using service
+    const jobPosts = await JobPostsService.getJobPosts(request.user.id, validatedQuery);
 
     return NextResponse.json({
       success: true,
-      jobPosts: parsedJobPosts,
+      jobPosts,
     });
   } catch (error) {
+    if (error instanceof z.ZodError) {
+      return NextResponse.json(
+        {
+          error: 'Validation failed',
+          details: error.errors.map(e => ({ field: e.path.join('.'), message: e.message }))
+        },
+        { status: 400 }
+      );
+    }
+
     console.error('Error fetching job posts:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
@@ -51,45 +43,24 @@ async function getJobPosts(request: AuthenticatedRequest) {
 async function createJobPost(request: AuthenticatedRequest) {
   try {
     const body = await request.json();
-    const validatedData = createJobPostSchema.parse(body);
 
-    const newJobPost = {
-      id: randomUUID(),
-      userId: request.user.id,
-      title: validatedData.title,
-      department: validatedData.department || null,
-      location: validatedData.location || null,
-      employmentType: validatedData.employmentType || null,
-      experienceLevel: validatedData.experienceLevel || null,
-      description: validatedData.description,
-      requirements: validatedData.requirements ? JSON.stringify(validatedData.requirements) : null,
-      responsibilities: validatedData.responsibilities ? JSON.stringify(validatedData.responsibilities) : null,
-      benefits: validatedData.benefits ? JSON.stringify(validatedData.benefits) : null,
-      salaryRange: validatedData.salaryRange || null,
-      isActive: true,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
+    // Validate request body
+    const validatedData = createJobPostBodySchema.parse(body);
 
-    const [createdJobPost] = await db.insert(jobPost).values(newJobPost).returning();
-
-
-    // Parse JSON fields for response
-    const responseJobPost = {
-      ...createdJobPost,
-      requirements: createdJobPost.requirements ? JSON.parse(createdJobPost.requirements) : [],
-      responsibilities: createdJobPost.responsibilities ? JSON.parse(createdJobPost.responsibilities) : [],
-      benefits: createdJobPost.benefits ? JSON.parse(createdJobPost.benefits) : [],
-    };
+    // Create job post using service
+    const jobPost = await JobPostsService.createJobPost(request.user.id, validatedData);
 
     return NextResponse.json({
       success: true,
-      jobPost: responseJobPost,
+      jobPost,
     });
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { error: 'Validation error', details: error.errors },
+        {
+          error: 'Validation failed',
+          details: error.errors.map(e => ({ field: e.path.join('.'), message: e.message }))
+        },
         { status: 400 }
       );
     }

@@ -1,7 +1,7 @@
 // Theme configuration for next-themes
 export const themeConfig = {
-  // The HTML attribute used to store the theme
-  attribute: 'data-theme',
+  // The HTML attribute used to store the theme (class for shadcn/ui compatibility)
+  attribute: 'class',
 
   // Default theme when first visit (light, dark, or system)
   defaultTheme: 'system',

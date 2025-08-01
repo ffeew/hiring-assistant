@@ -1,10 +1,4 @@
 import { 
-  emailRequestSchema, 
-  emailPreviewRequestSchema,
-  extractionResponseSchema,
-  createJobPostSchema,
-  updateJobPostSchema,
-  profileUpdateSchema,
   type EmailRequestData,
   type EmailPreviewRequestData,
   type ExtractionResponseData,
@@ -14,10 +8,14 @@ import {
   type ProfileUpdateData,
   type ProfileResponseData
 } from '@/app/types';
+import { extractionResponseSchema } from '@/app/api/extract/resume-extraction.validator';
+import { sendEmailsBodySchema, emailPreviewBodySchema } from '@/app/api/email/email.validator';
+import { createJobPostBodySchema, updateJobPostBodySchema } from '@/app/api/job-posts/job-posts.validator';
+import { updateProfileBodySchema } from '@/app/api/profile/profile.validator';
 import { z } from 'zod';
 
 // Infer the recipient type from the schema
-type EmailPreviewRecipient = z.infer<typeof emailPreviewRequestSchema>['recipients'][0];
+type EmailPreviewRecipient = z.infer<typeof emailPreviewBodySchema>['recipients'][0];
 
 // API Response types
 export interface EmailSendResponse {
@@ -82,7 +80,7 @@ export const apiClient = {
   // Email sending
   async sendEmails(payload: EmailRequestData): Promise<EmailSendResponse> {
     // Validate input data
-    const validatedPayload = emailRequestSchema.parse(payload);
+    const validatedPayload = sendEmailsBodySchema.parse(payload);
 
     const response = await fetch("/api/email", {
       method: "POST",
@@ -103,7 +101,7 @@ export const apiClient = {
   // Email preview
   async previewEmails(payload: EmailPreviewRequestData): Promise<EmailPreviewResponse> {
     // Validate input data
-    const validatedPayload = emailPreviewRequestSchema.parse(payload);
+    const validatedPayload = emailPreviewBodySchema.parse(payload);
 
     const response = await fetch("/api/email/preview", {
       method: "POST",
@@ -149,7 +147,7 @@ export const apiClient = {
 
   async createJobPost(payload: CreateJobPostData): Promise<JobPost> {
     // Validate input data
-    const validatedPayload = createJobPostSchema.parse(payload);
+    const validatedPayload = createJobPostBodySchema.parse(payload);
 
     const response = await fetch('/api/job-posts', {
       method: 'POST',
@@ -168,7 +166,7 @@ export const apiClient = {
 
   async updateJobPost(id: string, payload: UpdateJobPostData): Promise<JobPost> {
     // Validate input data
-    const validatedPayload = updateJobPostSchema.parse(payload);
+    const validatedPayload = updateJobPostBodySchema.parse(payload);
 
     const response = await fetch(`/api/job-posts/${id}`, {
       method: 'PUT',
@@ -227,7 +225,7 @@ export const apiClient = {
 
   async updateProfile(payload: ProfileUpdateData): Promise<ProfileResponseData> {
     // Validate input data
-    const validatedPayload = profileUpdateSchema.parse(payload);
+    const validatedPayload = updateProfileBodySchema.parse(payload);
 
     const response = await fetch('/api/profile', {
       method: 'PATCH',

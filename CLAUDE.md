@@ -5,12 +5,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Commands
 
 ### Development
+
 - `npm run dev` - Start development server with Turbopack
 - `npm run build` - Build for production
 - `npm start` - Start production server
 - `npm run lint` - Run ESLint
 
 ### Database
+
 - `npx drizzle-kit generate` - Generate database migrations
 - `npx drizzle-kit migrate` - Run database migrations
 - `npx drizzle-kit studio` - Open Drizzle Studio for database inspection
@@ -22,11 +24,13 @@ This is a **Next.js 15 hiring assistant application** that automates resume proc
 ### Core Components
 
 **Authentication System**
+
 - Uses Better Auth with Drizzle adapter for session management
 - Database schema in `src/lib/db/schema.ts` defines user, session, account, and verification tables
 - All API routes require authentication via session validation
 
 **AI-Powered Resume Processing Pipeline**
+
 - `src/app/api/extract/extract.service.ts` - Mistral AI OCR integration for PDF/DOCX resume parsing
 - `src/app/api/extract/route.ts` - API endpoint with authentication and error handling
 - Supports bulk resume upload with structured data extraction (firstName, lastName, email)
@@ -34,6 +38,7 @@ This is a **Next.js 15 hiring assistant application** that automates resume proc
 - Structured output via Zod schemas with Mistral's responseFormatFromZodObject
 
 **Email Communication System**
+
 - `src/app/api/email/email.service.ts` - Nodemailer integration with Gmail SMTP
 - Two template types: acknowledgment and screening emails in `src/app/api/email/templates/`
 - Company branding support via environment variables
@@ -41,6 +46,7 @@ This is a **Next.js 15 hiring assistant application** that automates resume proc
 - Email preview functionality before sending
 
 **Job Posts Management System**
+
 - `src/lib/db/schema.ts` - Job post table with comprehensive fields (title, description, requirements, etc.)
 - `src/app/api/job-posts/` - Complete CRUD API routes for job advertisements
 - `src/app/components/job-posts/` - Job post management UI with React Hook Form validation
@@ -48,19 +54,81 @@ This is a **Next.js 15 hiring assistant application** that automates resume proc
 - Support for job post status management (active/inactive)
 
 **Database Layer**
-- Drizzle ORM with LibSQL/Turso as the database provider  
+
+- Drizzle ORM with LibSQL/Turso as the database provider
 - Configuration in `drizzle.config.ts` with Turso credentials
 - Connection management in `src/lib/db/db.ts`
 
 ### Key Architectural Patterns
 
+**API Route Architecture (MANDATORY PATTERN)**
+This application follows a strict 3-layer architecture for all API routes. **ALL new API routes MUST follow this pattern:**
+
+1. **Validator Layer** (`*.validator.ts`)
+
+   - Contains Zod schemas for request validation (query, body, params)
+   - Reuses existing schemas from `src/app/types/index.ts` when possible
+   - Example: `getApplicantsQuerySchema`, `createApplicantBodySchema`, `applicantParamsSchema`
+
+2. **Service Layer** (`*.service.ts`)
+
+   - Contains ALL business logic and database operations
+   - Static class methods for consistency
+   - Handles transactions, error throwing, data transformation
+   - Example: `ApplicantsService.getApplicants()`, `JobPostsService.createJobPost()`
+
+3. **Controller Layer** (`route.ts`)
+   - ONLY handles HTTP concerns: validation → service → response
+   - Uses validators to validate input
+   - Calls appropriate service methods
+   - Handles HTTP status codes and error responses
+   - NO business logic in controllers
+
+**Example Structure:**
+
+```
+src/app/api/example/
+├── example.validator.ts    # Zod schemas
+├── example.service.ts      # Business logic
+└── route.ts               # HTTP controller
+```
+
+**Controller Pattern:**
+
+```typescript
+async function createExample(request: AuthenticatedRequest) {
+	try {
+		const body = await request.json();
+		const validatedData = createExampleBodySchema.parse(body);
+		const result = await ExampleService.create(request.user.id, validatedData);
+		return NextResponse.json({ success: true, data: result });
+	} catch (error) {
+		if (error instanceof ZodError) {
+			return NextResponse.json(
+				{
+					error: "Validation failed",
+					details: error.errors.map((e) => ({
+						field: e.path.join("."),
+						message: e.message,
+					})),
+				},
+				{ status: 400 }
+			);
+		}
+		// Handle business logic errors...
+	}
+}
+```
+
 **Environment Configuration**
+
 - `src/lib/env.ts` provides Zod-based environment validation for core services
 - Validates essential configuration: Mistral AI, Better Auth, and Turso database
 - User-specific configuration (email, company details) stored in database per user
 - Environment status debugging via `getEnvironmentStatus()`
 
 **Data Fetching Architecture**
+
 - TanStack Query (`@tanstack/react-query`) for server state management
 - Custom hooks in `src/app/hooks/use-job-posts.ts` for job posts CRUD operations
 - Query caching with 1-minute stale time and smart invalidation strategies
@@ -68,12 +136,14 @@ This is a **Next.js 15 hiring assistant application** that automates resume proc
 - Background refetching and request deduplication
 
 **State Management & UI Flow**
+
 - Custom hook `src/app/hooks/use-hiring-assistant.ts` orchestrates the entire hiring workflow
 - Manages file upload → data extraction → email preview → bulk sending pipeline
 - TanStack Query integration for job posts fetching with loading states
 - Template selection per candidate with default to SCREENING template
 
 **Security Architecture**
+
 - AES-256-GCM encryption for sensitive data (Gmail app passwords)
 - PBKDF2 key derivation with 100,000 iterations using BETTER_AUTH_SECRET
 - Salt-based encryption with unique salt per encrypted value
@@ -81,27 +151,85 @@ This is a **Next.js 15 hiring assistant application** that automates resume proc
 - `src/lib/crypto.ts` provides secure encryption utilities with authentication
 
 **Error Handling Strategy**
+
 - API routes use Promise.allSettled for graceful failure handling
 - Individual file processing errors don't block other files
 - Mistral SDK errors are parsed and returned with meaningful messages
 - Email sending tracks success/failure counts with detailed error reporting
 
 **AI Integration Architecture**
+
 - Recent addition of `@ai-sdk/groq` and `ai` packages (v4.3.19) suggests planned Groq AI integration
 - Current implementation uses Mistral AI OCR with structured output
 - File type validation ensures only supported formats (PDF/DOCX) are processed
 - Base64 encoding for PDFs, file upload for DOCX documents to Mistral
 
 ### API Routes Structure
-- `/api/extract` - Resume data extraction with authentication
-- `/api/email` - Bulk email sending
-- `/api/email/preview` - Email template preview generation
-- `/api/job-posts` - Job posts CRUD operations (GET, POST)
+
+All API routes follow the validator/service/controller pattern:
+
+- `/api/applicants` - Applicant management (GET, POST) with `applicants.validator.ts` & `applicants.service.ts`
+- `/api/applicants/[id]` - Individual applicant operations (GET, PUT, DELETE)
+- `/api/job-posts` - Job posts CRUD operations (GET, POST) with `job-posts.validator.ts` & `job-posts.service.ts`
 - `/api/job-posts/[id]` - Individual job post operations (GET, PUT, DELETE)
+- `/api/resumes` - Resume file management (GET, POST) with `resumes.validator.ts` & `resumes.service.ts`
+- `/api/resumes/[id]` - Individual resume file operations (GET, PUT, DELETE)
+- `/api/profile` - User profile management (GET, PATCH) with `profile.validator.ts` & `profile.service.ts`
+- `/api/email` - Bulk email sending with `email.validator.ts` & existing `email.service.ts`
+- `/api/email/preview` - Email template preview generation
+- `/api/extract` - Resume data extraction with authentication and existing service layer
 - `/api/auth/[...all]` - Better Auth endpoints for login/signup
 
+## Development Guidelines
+
+### API Development Rules
+
+When creating or modifying API routes, you MUST:
+
+1. **Follow the 3-layer pattern** - Always create validator, service, and controller layers
+2. **Reuse existing Zod schemas** - Check `src/app/types/index.ts` first before creating new schemas
+3. **Use consistent error handling** - Always handle ZodError for validation failures
+4. **Implement proper authentication** - Use `withAuth` or `withAuthParams` middleware
+5. **Include soft delete support** - Use `withNotDeleted` and `softDeleteData` from `@/lib/soft-delete`
+6. **Use transactions** - Wrap database operations in `withTransaction` when needed
+7. **Parse JSON fields** - Always parse JSON strings from database for response (requirements, metadata, etc.)
+
+### File Naming Conventions
+
+- `*.validator.ts` - Zod schemas and validation logic
+- `*.service.ts` - Business logic and database operations
+- `route.ts` - HTTP controllers only
+- Use kebab-case for directory names (`job-posts`, not `jobPosts`)
+
+### Service Class Pattern
+
+```typescript
+export class ExampleService {
+	static async getItems(userId: string, query: GetItemsQuery) {
+		// Implementation with database operations
+	}
+
+	static async createItem(userId: string, data: CreateItemBody) {
+		// Implementation with validation and creation
+	}
+
+	static async updateItem(
+		userId: string,
+		itemId: string,
+		data: UpdateItemBody
+	) {
+		// Implementation with existence check and update
+	}
+
+	static async deleteItem(userId: string, itemId: string) {
+		// Implementation with soft delete
+	}
+}
+```
+
 ### Technology Stack
-- **Frontend**: Next.js 15, React 19, TypeScript, Tailwind CSS, next-themes
+
+- **Frontend**: Next.js 15, React 19, TypeScript, Tailwind CSS v4, next-themes
 - **Backend**: Next.js API routes, Nodemailer for email
 - **Database**: Drizzle ORM with LibSQL/Turso
 - **Data Fetching**: TanStack Query (React Query) for server state management

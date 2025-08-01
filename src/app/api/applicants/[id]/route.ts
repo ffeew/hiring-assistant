@@ -1,32 +1,21 @@
 import { NextResponse } from 'next/server';
-import { db } from '@/lib/db/db';
-import { withTransaction } from '@/lib/db/transaction';
-import { applicant as applicantTable } from '@/lib/db/schema';
-import { eq } from 'drizzle-orm';
-import { updateApplicantSchema } from '@/app/types';
 import { ZodError } from 'zod';
 import { withAuthParams, AuthenticatedRequest } from '@/lib/auth-middleware';
-import { withNotDeleted, softDeleteData } from '@/lib/soft-delete';
+import { ApplicantsService } from '../applicants.service';
+import { applicantParamsSchema, updateApplicantBodySchema } from '../applicants.validator';
 
 async function getApplicant(
   request: AuthenticatedRequest,
   { params }: { params: Promise<Record<string, string>>; }
 ) {
-
   try {
     const { id } = await params;
 
-    const [applicant] = await db
-      .select()
-      .from(applicantTable)
-      .where(
-        withNotDeleted(
-          applicantTable.deletedAt,
-          eq(applicantTable.id, id),
-          eq(applicantTable.userId, request.user.id)
-        )
-      )
-      .limit(1);
+    // Validate params
+    const validatedParams = applicantParamsSchema.parse({ id });
+
+    // Get applicant using service
+    const applicant = await ApplicantsService.getApplicantById(request.user.id, validatedParams.id);
 
     if (!applicant) {
       return NextResponse.json(
@@ -35,17 +24,21 @@ async function getApplicant(
       );
     }
 
-    // Parse metadata JSON string
-    const applicantResponse = {
-      ...applicant,
-      metadata: applicant.metadata ? JSON.parse(applicant.metadata) : null,
-    };
-
     return NextResponse.json({
       success: true,
-      applicant: applicantResponse,
+      applicant,
     });
   } catch (error) {
+    if (error instanceof ZodError) {
+      return NextResponse.json(
+        {
+          error: 'Validation failed',
+          details: error.errors.map(e => ({ field: e.path.join('.'), message: e.message }))
+        },
+        { status: 400 }
+      );
+    }
+
     console.error('Error fetching applicant:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
@@ -62,70 +55,16 @@ async function updateApplicant(
     const { id } = await params;
     const body = await request.json();
 
-    // Validate request body with Zod
-    const validatedData = updateApplicantSchema.parse(body);
+    // Validate params and body
+    const validatedParams = applicantParamsSchema.parse({ id });
+    const validatedData = updateApplicantBodySchema.parse(body);
 
-    // Use transaction to ensure atomicity
-    const updatedApplicant = await withTransaction(async (tx) => {
-      // Check if applicant exists and belongs to user
-      const [existingApplicant] = await tx
-        .select()
-        .from(applicantTable)
-        .where(
-          withNotDeleted(
-            applicantTable.deletedAt,
-            eq(applicantTable.id, id),
-            eq(applicantTable.userId, request.user.id)
-          )
-        )
-        .limit(1);
-
-      if (!existingApplicant) {
-        throw new Error('Applicant not found');
-      }
-
-      // Update applicant
-      const updateData: Record<string, unknown> = {
-        ...validatedData,
-        metadata: validatedData.metadata ? JSON.stringify(validatedData.metadata) : undefined,
-        updatedAt: new Date(),
-      };
-
-      // Remove undefined values
-      Object.keys(updateData).forEach(key => {
-        if (updateData[key] === undefined) {
-          delete updateData[key];
-        }
-      });
-
-      const [updated] = await tx
-        .update(applicantTable)
-        .set(updateData)
-        .where(
-          withNotDeleted(
-            applicantTable.deletedAt,
-            eq(applicantTable.id, id),
-            eq(applicantTable.userId, request.user.id)
-          )
-        )
-        .returning();
-
-      if (!updated) {
-        throw new Error('Failed to update applicant');
-      }
-
-      return updated;
-    });
-
-    // Parse metadata for response
-    const applicantResponse = {
-      ...updatedApplicant,
-      metadata: updatedApplicant.metadata ? JSON.parse(updatedApplicant.metadata) : null,
-    };
+    // Update applicant using service
+    const applicant = await ApplicantsService.updateApplicant(request.user.id, validatedParams.id, validatedData);
 
     return NextResponse.json({
       success: true,
-      applicant: applicantResponse,
+      applicant,
     });
   } catch (error) {
     if (error instanceof ZodError) {
@@ -138,7 +77,7 @@ async function updateApplicant(
       );
     }
 
-    // Handle custom errors
+    // Handle business logic errors
     if (error instanceof Error && (
       error.message === 'Applicant not found' ||
       error.message === 'Failed to update applicant'
@@ -164,38 +103,28 @@ async function deleteApplicant(
   try {
     const { id } = await params;
 
-    // Use transaction to ensure atomicity of soft delete
-    await withTransaction(async (tx) => {
-      // Check if applicant exists and belongs to user
-      const [existingApplicant] = await tx
-        .select()
-        .from(applicantTable)
-        .where(
-          withNotDeleted(
-            applicantTable.deletedAt,
-            eq(applicantTable.id, id),
-            eq(applicantTable.userId, request.user.id)
-          )
-        )
-        .limit(1);
+    // Validate params
+    const validatedParams = applicantParamsSchema.parse({ id });
 
-      if (!existingApplicant) {
-        throw new Error('Applicant not found');
-      }
-
-      // Soft delete applicant
-      await tx
-        .update(applicantTable)
-        .set(softDeleteData())
-        .where(eq(applicantTable.id, id));
-    });
+    // Delete applicant using service
+    await ApplicantsService.deleteApplicant(request.user.id, validatedParams.id);
 
     return NextResponse.json({
       success: true,
       message: 'Applicant deleted successfully',
     });
   } catch (error) {
-    // Handle custom errors
+    if (error instanceof ZodError) {
+      return NextResponse.json(
+        {
+          error: 'Validation failed',
+          details: error.errors.map(e => ({ field: e.path.join('.'), message: e.message }))
+        },
+        { status: 400 }
+      );
+    }
+
+    // Handle business logic errors
     if (error instanceof Error && error.message === 'Applicant not found') {
       return NextResponse.json(
         { error: error.message },

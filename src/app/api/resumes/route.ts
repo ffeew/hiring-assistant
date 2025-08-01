@@ -1,16 +1,10 @@
 import { NextResponse } from 'next/server';
-import { db } from '@/lib/db/db';
-import { withTransaction } from '@/lib/db/transaction';
-import { resumeFile as resumeFileTable } from '@/lib/db/schema';
-import { r2Service } from '@/lib/r2';
-import { randomUUID } from 'node:crypto';
-import { SUPPORTED_FILE_TYPES } from '@/app/types';
-import { eq } from 'drizzle-orm';
 import { withAuth, AuthenticatedRequest } from '@/lib/auth-middleware';
-import { withNotDeleted } from '@/lib/soft-delete';
+import { ResumesService } from './resumes.service';
+import { getResumeFilesQuerySchema } from './resumes.validator';
+import { ZodError } from 'zod';
 
 async function uploadResumeFile(request: AuthenticatedRequest) {
-
   try {
     const formData = await request.formData();
     const file = formData.get('file') as File;
@@ -30,66 +24,21 @@ async function uploadResumeFile(request: AuthenticatedRequest) {
       );
     }
 
-    // Validate file type
-    if (!SUPPORTED_FILE_TYPES.includes(file.type as typeof SUPPORTED_FILE_TYPES[number])) {
-      return NextResponse.json(
-        { error: 'Unsupported file type. Please upload PDF or DOCX files only.' },
-        { status: 400 }
-      );
-    }
-
-    // Validate file size (10MB limit)
-    const maxSize = 10 * 1024 * 1024; // 10MB
-    if (file.size > maxSize) {
-      return NextResponse.json(
-        { error: 'File too large. Maximum size is 10MB.' },
-        { status: 400 }
-      );
-    }
-
-    // Convert file to buffer
-    const fileBuffer = Buffer.from(await file.arrayBuffer());
-
-    // Use transaction to ensure atomicity of upload and database record creation
-    const { newResumeFile, uploadResult } = await withTransaction(async (tx) => {
-      // Upload to R2 first
-      const uploadResult = await r2Service.uploadFile(
-        fileBuffer,
-        file.name,
-        file.type,
-        request.user.id
-      );
-
-      // Save file record to database
-      const resumeFileId = randomUUID();
-      const [newResumeFile] = await tx
-        .insert(resumeFileTable)
-        .values({
-          id: resumeFileId,
-          applicantId,
-          fileName: file.name,
-          filePath: uploadResult.filePath,
-          fileSize: file.size,
-          mimeType: file.type,
-          resumeContent: null, // Will be populated when content is extracted
-          extractionStatus: 'pending',
-          extractionError: null,
-          createdAt: new Date(),
-        })
-        .returning();
-
-      return { newResumeFile, uploadResult };
-    });
+    // Upload resume file using service
+    const resumeFile = await ResumesService.uploadResumeFile(file, applicantId, request.user.id);
 
     return NextResponse.json({
       success: true,
-      resumeFile: {
-        ...newResumeFile,
-        url: uploadResult.url,
-      },
+      resumeFile,
     });
-
   } catch (error) {
+    if (error instanceof Error) {
+      return NextResponse.json(
+        { error: error.message },
+        { status: 400 }
+      );
+    }
+
     console.error('Error uploading resume file:', error);
     return NextResponse.json(
       { error: 'Failed to upload resume file' },
@@ -101,41 +50,35 @@ async function uploadResumeFile(request: AuthenticatedRequest) {
 async function getResumeFiles(request: AuthenticatedRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const applicantId = searchParams.get('applicantId');
+    const queryParams = {
+      applicantId: searchParams.get('applicantId') || undefined,
+    };
 
-    if (!applicantId) {
+    // Validate query parameters
+    const validatedQuery = getResumeFilesQuerySchema.parse(queryParams);
+
+    // Get resume files using service
+    const resumeFiles = await ResumesService.getResumeFiles(validatedQuery, request.user.id);
+
+    return NextResponse.json({
+      success: true,
+      resumeFiles,
+    });
+  } catch (error) {
+    if (error instanceof ZodError) {
+      console.error('Resume files validation error:', error.errors);
       return NextResponse.json(
-        { error: 'Applicant ID is required' },
+        {
+          error: 'Validation failed',
+          details: error.errors.map(e => ({ field: e.path.join('.'), message: e.message }))
+        },
         { status: 400 }
       );
     }
 
-    // Get resume files for the applicant (excluding soft-deleted)
-    const resumeFiles = await db
-      .select()
-      .from(resumeFileTable)
-      .where(
-        withNotDeleted(
-          resumeFileTable.deletedAt,
-          eq(resumeFileTable.applicantId, applicantId)
-        )
-      );
-
-    // Add public URLs to the response
-    const resumeFilesWithUrls = resumeFiles.map(file => ({
-      ...file,
-      url: r2Service.getPublicUrl(file.filePath),
-    }));
-
-    return NextResponse.json({
-      success: true,
-      resumeFiles: resumeFilesWithUrls,
-    });
-
-  } catch (error) {
     console.error('Error fetching resume files:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch resume files' },
+      { error: 'Failed to fetch resume files', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     );
   }

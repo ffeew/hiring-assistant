@@ -5,7 +5,7 @@ import { withTransaction } from '@/lib/db/transaction';
 import { applicant as applicantTable, emailCommunication as emailCommunicationTable } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { randomUUID } from 'node:crypto';
-import { emailRequestSchema } from '@/app/types';
+import { sendEmailsBodySchema } from './email.validator';
 import { ZodError } from 'zod';
 import { withAuth, AuthenticatedRequest } from '@/lib/auth-middleware';
 import { updateApplicantFields } from '../extract/resume-extraction.service';
@@ -14,8 +14,8 @@ async function sendEmails(request: AuthenticatedRequest) {
   try {
     const body = await request.json();
 
-    // Validate request body with Zod
-    const validatedData = emailRequestSchema.parse(body);
+    // Validate request body
+    const validatedData = sendEmailsBodySchema.parse(body);
     const { recipients, jobPostId } = validatedData;
 
     // Check if user has email configuration

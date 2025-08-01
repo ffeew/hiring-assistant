@@ -1,36 +1,21 @@
 import { NextResponse } from 'next/server';
-import { db } from '@/lib/db/db';
-import { withTransaction } from '@/lib/db/transaction';
-import { resumeFile as resumeFileTable, applicant as applicantTable } from '@/lib/db/schema';
-import { r2Service } from '@/lib/r2';
-import { eq } from 'drizzle-orm';
 import { withAuthParams, AuthenticatedRequest } from '@/lib/auth-middleware';
-import { withNotDeleted, softDeleteData } from '@/lib/soft-delete';
+import { ResumesService } from '../resumes.service';
+import { resumeFileParamsSchema, updateResumeFileBodySchema } from '../resumes.validator';
+import { ZodError } from 'zod';
 
 async function getResumeFile(
   request: AuthenticatedRequest,
   { params }: { params: Promise<Record<string, string>>; }
 ) {
-
   try {
     const { id } = await params;
 
-    // Get resume file with applicant verification
-    const [resumeFile] = await db
-      .select({
-        resumeFile: resumeFileTable,
-        applicant: applicantTable,
-      })
-      .from(resumeFileTable)
-      .innerJoin(applicantTable, eq(resumeFileTable.applicantId, applicantTable.id))
-      .where(
-        withNotDeleted(
-          resumeFileTable.deletedAt,
-          eq(resumeFileTable.id, id),
-          eq(applicantTable.userId, request.user.id)
-        )
-      )
-      .limit(1);
+    // Validate params
+    const validatedParams = resumeFileParamsSchema.parse({ id });
+
+    // Get resume file using service
+    const resumeFile = await ResumesService.getResumeFileByIdWithUserCheck(validatedParams.id, request.user.id);
 
     if (!resumeFile) {
       return NextResponse.json(
@@ -39,18 +24,21 @@ async function getResumeFile(
       );
     }
 
-    // Add public URL to the response
-    const resumeFileWithUrl = {
-      ...resumeFile.resumeFile,
-      url: r2Service.getPublicUrl(resumeFile.resumeFile.filePath),
-    };
-
     return NextResponse.json({
       success: true,
-      resumeFile: resumeFileWithUrl,
+      resumeFile,
     });
-
   } catch (error) {
+    if (error instanceof ZodError) {
+      return NextResponse.json(
+        {
+          error: 'Validation failed',
+          details: error.errors.map(e => ({ field: e.path.join('.'), message: e.message }))
+        },
+        { status: 400 }
+      );
+    }
+
     console.error('Error fetching resume file:', error);
     return NextResponse.json(
       { error: 'Failed to fetch resume file' },
@@ -66,49 +54,28 @@ async function deleteResumeFile(
   try {
     const { id } = await params;
 
-    // Use transaction to ensure atomicity of deletion
-    const resumeFile = await withTransaction(async (tx) => {
-      // Get resume file with applicant verification
-      const [resumeFileRecord] = await tx
-        .select({
-          resumeFile: resumeFileTable,
-          applicant: applicantTable,
-        })
-        .from(resumeFileTable)
-        .innerJoin(applicantTable, eq(resumeFileTable.applicantId, applicantTable.id))
-        .where(
-          withNotDeleted(
-            resumeFileTable.deletedAt,
-            eq(resumeFileTable.id, id),
-            eq(applicantTable.userId, request.user.id)
-          )
-        )
-        .limit(1);
+    // Validate params
+    const validatedParams = resumeFileParamsSchema.parse({ id });
 
-      if (!resumeFileRecord) {
-        throw new Error('Resume file not found');
-      }
-
-      // Soft delete record from database first
-      await tx
-        .update(resumeFileTable)
-        .set(softDeleteData())
-        .where(eq(resumeFileTable.id, id));
-
-      // Delete file from R2 storage
-      await r2Service.deleteFile(resumeFile.filePath);
-
-      return resumeFileRecord.resumeFile;
-    });
-
+    // Delete resume file using service
+    await ResumesService.deleteResumeFile(validatedParams.id, request.user.id);
 
     return NextResponse.json({
       success: true,
       message: 'Resume file deleted successfully',
     });
-
   } catch (error) {
-    // Handle custom errors
+    if (error instanceof ZodError) {
+      return NextResponse.json(
+        {
+          error: 'Validation failed',
+          details: error.errors.map(e => ({ field: e.path.join('.'), message: e.message }))
+        },
+        { status: 400 }
+      );
+    }
+
+    // Handle business logic errors
     if (error instanceof Error && error.message === 'Resume file not found') {
       return NextResponse.json(
         { error: error.message },
@@ -128,72 +95,33 @@ async function updateResumeFile(
   request: AuthenticatedRequest,
   { params }: { params: Promise<Record<string, string>>; }
 ) {
-
   try {
     const { id } = await params;
     const body = await request.json();
-    const { resumeContent, extractionStatus, extractionError } = body;
 
-    // Use transaction to ensure atomicity
-    const updatedResumeFile = await withTransaction(async (tx) => {
-      // Get resume file with applicant verification
-      const [existingResumeFile] = await tx
-        .select({
-          resumeFile: resumeFileTable,
-          applicant: applicantTable,
-        })
-        .from(resumeFileTable)
-        .innerJoin(applicantTable, eq(resumeFileTable.applicantId, applicantTable.id))
-        .where(
-          withNotDeleted(
-            resumeFileTable.deletedAt,
-            eq(resumeFileTable.id, id),
-            eq(applicantTable.userId, request.user.id)
-          )
-        )
-        .limit(1);
+    // Validate params and body
+    const validatedParams = resumeFileParamsSchema.parse({ id });
+    const validatedData = updateResumeFileBodySchema.parse(body);
 
-      if (!existingResumeFile) {
-        throw new Error('Resume file not found');
-      }
-
-      // Update resume file record
-      const updateData: Record<string, unknown> = {};
-
-      if (resumeContent !== undefined) {
-        updateData.resumeContent = resumeContent;
-      }
-
-      if (extractionStatus !== undefined) {
-        updateData.extractionStatus = extractionStatus;
-      }
-
-      if (extractionError !== undefined) {
-        updateData.extractionError = extractionError;
-      }
-
-      const [updated] = await tx
-        .update(resumeFileTable)
-        .set(updateData)
-        .where(eq(resumeFileTable.id, id))
-        .returning();
-
-      return updated;
-    });
-
-    // Add public URL to the response
-    const resumeFileWithUrl = {
-      ...updatedResumeFile,
-      url: r2Service.getPublicUrl(updatedResumeFile.filePath),
-    };
+    // Update resume file using service
+    const resumeFile = await ResumesService.updateResumeFile(validatedParams.id, request.user.id, validatedData);
 
     return NextResponse.json({
       success: true,
-      resumeFile: resumeFileWithUrl,
+      resumeFile,
     });
-
   } catch (error) {
-    // Handle custom errors
+    if (error instanceof ZodError) {
+      return NextResponse.json(
+        {
+          error: 'Validation failed',
+          details: error.errors.map(e => ({ field: e.path.join('.'), message: e.message }))
+        },
+        { status: 400 }
+      );
+    }
+
+    // Handle business logic errors
     if (error instanceof Error && error.message === 'Resume file not found') {
       return NextResponse.json(
         { error: error.message },
