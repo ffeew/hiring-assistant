@@ -1,11 +1,30 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import type { Session } from "@/lib/auth";
 import { useUpdateProfileMutation } from "@/app/hooks/use-api-mutations";
 import type { ProfileUpdateData } from "@/app/types";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Separator } from "@/components/ui/separator";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { User, Mail, Building, AlertCircle, CheckCircle, X } from "lucide-react";
 
 type User = Session["user"];
+
+const profileSchema = z.object({
+	gmailAddress: z.string().email("Please enter a valid email address"),
+	gmailAppPassword: z.string().min(1, "App password is required"),
+	companyName: z.string().optional(),
+	jobTitle: z.string().optional(),
+});
+
+type ProfileFormData = z.infer<typeof profileSchema>;
 
 interface ProfileSettingsModalProps {
 	isOpen: boolean;
@@ -20,43 +39,45 @@ export function ProfileSettingsModal({
 	user,
 	onUpdate,
 }: ProfileSettingsModalProps) {
-	const [formData, setFormData] = useState({
-		gmailAddress: user.gmailAddress || "",
-		gmailAppPassword: user.gmailAppPassword || "",
-		companyName: user.companyName || "",
-		jobTitle: user.jobTitle || "",
-	});
 	const [error, setError] = useState("");
 	const [success, setSuccess] = useState("");
 
 	// React Query mutation
 	const updateProfileMutation = useUpdateProfileMutation();
 
+	const form = useForm<ProfileFormData>({
+		resolver: zodResolver(profileSchema),
+		defaultValues: {
+			gmailAddress: user.gmailAddress || "",
+			gmailAppPassword: "",
+			companyName: user.companyName || "",
+			jobTitle: user.jobTitle || "",
+		},
+	});
+
 	useEffect(() => {
 		if (isOpen) {
-			setFormData({
+			form.reset({
 				gmailAddress: user.gmailAddress || "",
-				gmailAppPassword:
-					user.gmailAppPassword === "****" ? "" : user.gmailAppPassword || "", // Clear masked password
+				gmailAppPassword: user.gmailAppPassword === "****" ? "" : user.gmailAppPassword || "",
 				companyName: user.companyName || "",
 				jobTitle: user.jobTitle || "",
 			});
 			setError("");
 			setSuccess("");
 		}
-	}, [isOpen, user]);
+	}, [isOpen, user, form]);
 
-	const handleSubmit = async (e: React.FormEvent) => {
-		e.preventDefault();
+	const onSubmit = async (data: ProfileFormData) => {
 		setError("");
 		setSuccess("");
 
 		try {
 			const payload: ProfileUpdateData = {
-				gmailAddress: formData.gmailAddress,
-				gmailAppPassword: formData.gmailAppPassword,
-				companyName: formData.companyName || undefined,
-				jobTitle: formData.jobTitle || undefined,
+				gmailAddress: data.gmailAddress,
+				gmailAppPassword: data.gmailAppPassword,
+				companyName: data.companyName || undefined,
+				jobTitle: data.jobTitle || undefined,
 			};
 
 			const updatedUser = await updateProfileMutation.mutateAsync(payload);
@@ -67,165 +88,157 @@ export function ProfileSettingsModal({
 		}
 	};
 
-	if (!isOpen) return null;
-
 	return (
-		<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-			<div className="bg-background border border-border rounded-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
-				<div className="p-6">
-					<div className="flex justify-between items-center mb-6">
-						<h2 className="text-xl font-semibold text-foreground">
-							Profile Settings
-						</h2>
-						<button
-							onClick={onClose}
-							className="text-muted-foreground hover:text-foreground transition-colors"
-						>
-							<svg
-								className="w-6 h-6"
-								fill="none"
-								stroke="currentColor"
-								viewBox="0 0 24 24"
-							>
-								<path
-									strokeLinecap="round"
-									strokeLinejoin="round"
-									strokeWidth={2}
-									d="M6 18L18 6M6 6l12 12"
-								/>
-							</svg>
-						</button>
-					</div>
+		<Dialog open={isOpen} onOpenChange={onClose}>
+			<DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+				<DialogHeader>
+					<DialogTitle className="flex items-center gap-2">
+						<User className="h-5 w-5" />
+						Profile Settings
+					</DialogTitle>
+					<DialogDescription>
+						Update your email configuration and company details
+					</DialogDescription>
+				</DialogHeader>
 
-					<form onSubmit={handleSubmit} className="space-y-4">
+				<Form {...form}>
+					<form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+						{/* Email Configuration Section */}
 						<div className="space-y-4">
-							<h3 className="text-lg font-medium text-foreground border-b border-border pb-2">
-								Email Configuration
-							</h3>
-
-							<div>
-								<label
-									htmlFor="gmailAddress"
-									className="block text-sm font-medium text-foreground mb-1"
-								>
-									Gmail Address *
-								</label>
-								<input
-									type="email"
-									id="gmailAddress"
-									value={formData.gmailAddress}
-									onChange={(e) =>
-										setFormData({ ...formData, gmailAddress: e.target.value })
-									}
-									className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-									placeholder="your.email@gmail.com"
-									required
-								/>
+							<div className="space-y-2">
+								<h3 className="text-lg font-medium flex items-center gap-2">
+									<Mail className="h-4 w-4" />
+									Email Configuration
+								</h3>
+								<Separator />
 							</div>
 
-							<div>
-								<label
-									htmlFor="gmailAppPassword"
-									className="block text-sm font-medium text-foreground mb-1"
-								>
-									Gmail App Password *
-								</label>
-								<input
-									type="password"
-									id="gmailAppPassword"
-									value={formData.gmailAppPassword}
-									onChange={(e) =>
-										setFormData({
-											...formData,
-											gmailAppPassword: e.target.value,
-										})
-									}
-									className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-									placeholder="16-character app password"
-									required
-								/>
-								<p className="text-xs text-muted-foreground mt-1">
-									Generate an app password in your Google Account settings. Your
-									password is encrypted and stored securely.
-								</p>
-							</div>
+							<FormField
+								control={form.control}
+								name="gmailAddress"
+								render={({ field }) => (
+									<FormItem>
+										<FormLabel>Gmail Address *</FormLabel>
+										<FormControl>
+											<Input
+												placeholder="your.email@gmail.com"
+												type="email"
+												disabled={updateProfileMutation.isPending}
+												{...field}
+											/>
+										</FormControl>
+										<FormMessage />
+									</FormItem>
+								)}
+							/>
+
+							<FormField
+								control={form.control}
+								name="gmailAppPassword"
+								render={({ field }) => (
+									<FormItem>
+										<FormLabel>Gmail App Password *</FormLabel>
+										<FormControl>
+											<Input
+												placeholder="16-character app password"
+												type="password"
+												disabled={updateProfileMutation.isPending}
+												{...field}
+											/>
+										</FormControl>
+										<p className="text-xs text-muted-foreground">
+											Generate an app password in your Google Account settings. Your
+											password is encrypted and stored securely.
+										</p>
+										<FormMessage />
+									</FormItem>
+								)}
+							/>
 						</div>
 
+						{/* Company Details Section */}
 						<div className="space-y-4">
-							<h3 className="text-lg font-medium text-foreground border-b border-border pb-2">
-								Company Details
-							</h3>
-
-							<div>
-								<label
-									htmlFor="companyName"
-									className="block text-sm font-medium text-foreground mb-1"
-								>
-									Company Name
-								</label>
-								<input
-									type="text"
-									id="companyName"
-									value={formData.companyName}
-									onChange={(e) =>
-										setFormData({ ...formData, companyName: e.target.value })
-									}
-									className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-									placeholder="Your Company Name"
-								/>
+							<div className="space-y-2">
+								<h3 className="text-lg font-medium flex items-center gap-2">
+									<Building className="h-4 w-4" />
+									Company Details
+								</h3>
+								<Separator />
 							</div>
 
-							<div>
-								<label
-									htmlFor="jobTitle"
-									className="block text-sm font-medium text-foreground mb-1"
-								>
-									Your Job Title
-								</label>
-								<input
-									type="text"
-									id="jobTitle"
-									value={formData.jobTitle}
-									onChange={(e) =>
-										setFormData({ ...formData, jobTitle: e.target.value })
-									}
-									className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-									placeholder="Hiring Manager, HR Director, etc."
-								/>
-							</div>
+							<FormField
+								control={form.control}
+								name="companyName"
+								render={({ field }) => (
+									<FormItem>
+										<FormLabel>Company Name</FormLabel>
+										<FormControl>
+											<Input
+												placeholder="Your Company Name"
+												disabled={updateProfileMutation.isPending}
+												{...field}
+											/>
+										</FormControl>
+										<FormMessage />
+									</FormItem>
+								)}
+							/>
+
+							<FormField
+								control={form.control}
+								name="jobTitle"
+								render={({ field }) => (
+									<FormItem>
+										<FormLabel>Your Job Title</FormLabel>
+										<FormControl>
+											<Input
+												placeholder="Hiring Manager, HR Director, etc."
+												disabled={updateProfileMutation.isPending}
+												{...field}
+											/>
+										</FormControl>
+										<FormMessage />
+									</FormItem>
+								)}
+							/>
 						</div>
 
+						{/* Error and Success Messages */}
 						{error && (
-							<div className="p-3 bg-destructive/10 border border-destructive/20 rounded-md">
-								<p className="text-sm text-destructive">{error}</p>
-							</div>
+							<Alert variant="destructive">
+								<AlertCircle className="h-4 w-4" />
+								<AlertDescription>{error}</AlertDescription>
+							</Alert>
 						)}
 
 						{success && (
-							<div className="p-3 bg-green-500/10 border border-green-500/20 rounded-md">
-								<p className="text-sm text-green-600">{success}</p>
-							</div>
+							<Alert className="border-green-500/20 bg-green-500/10">
+								<CheckCircle className="h-4 w-4 text-green-600" />
+								<AlertDescription className="text-green-600">{success}</AlertDescription>
+							</Alert>
 						)}
 
-						<div className="flex gap-3 pt-4">
-							<button
+						{/* Action Buttons */}
+						<div className="flex items-center justify-end gap-3 pt-4">
+							<Button
 								type="button"
+								variant="outline"
 								onClick={onClose}
-								className="flex-1 px-4 py-2 text-sm font-medium text-muted-foreground bg-secondary hover:bg-secondary/80 rounded-md transition-colors"
+								disabled={updateProfileMutation.isPending}
 							>
+								<X className="h-4 w-4 mr-2" />
 								Cancel
-							</button>
-							<button
+							</Button>
+							<Button
 								type="submit"
 								disabled={updateProfileMutation.isPending}
-								className="flex-1 px-4 py-2 text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
 							>
 								{updateProfileMutation.isPending ? "Saving..." : "Save Changes"}
-							</button>
+							</Button>
 						</div>
 					</form>
-				</div>
-			</div>
-		</div>
+				</Form>
+			</DialogContent>
+		</Dialog>
 	);
 }

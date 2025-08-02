@@ -8,7 +8,7 @@ import { randomUUID } from 'node:crypto';
 import { sendEmailsBodySchema } from './email.validator';
 import { ZodError } from 'zod';
 import { withAuth, AuthenticatedRequest } from '@/lib/auth-middleware';
-import { updateApplicantFields } from '../extract/resume-extraction.service';
+import { ApplicantsService } from '../applicants/applicants.service';
 
 async function sendEmails(request: AuthenticatedRequest) {
   try {
@@ -43,7 +43,10 @@ async function sendEmails(request: AuthenticatedRequest) {
     const connectionTest = await emailService.testConnection();
     if (!connectionTest) {
       return NextResponse.json(
-        { error: 'Failed to connect to Gmail SMTP. Please check your credentials.' },
+        { 
+          error: 'Connection failed',
+          details: [{ field: 'gmail', message: 'Failed to connect to Gmail SMTP. Please check your credentials.' }]
+        },
         { status: 500 }
       );
     }
@@ -54,7 +57,7 @@ async function sendEmails(request: AuthenticatedRequest) {
     for (const recipient of recipients) {
       try {
         // Update applicant fields with corrected data from frontend
-        await updateApplicantFields(recipient.applicantId, {
+        await ApplicantsService.updateApplicantBasicFields(recipient.applicantId, {
           firstName: recipient.firstName,
           lastName: recipient.lastName,
           email: recipient.email,
@@ -141,7 +144,10 @@ async function sendEmails(request: AuthenticatedRequest) {
 
     console.error('Error in email API:', error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { 
+        error: 'Internal server error',
+        details: [{ field: 'server', message: 'Failed to send emails' }]
+      },
       { status: 500 }
     );
   }

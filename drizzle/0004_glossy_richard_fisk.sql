@@ -1,0 +1,1 @@
+ALTER TABLE `resume_file` ADD `job_post_id` text REFERENCES job_post(id);

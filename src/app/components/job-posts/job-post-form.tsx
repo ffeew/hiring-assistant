@@ -10,6 +10,14 @@ import {
 	EXPERIENCE_LEVELS,
 	EMPLOYMENT_TYPES,
 } from "@/app/types";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
+import { Plus, X, Save, XCircle } from "lucide-react";
 
 const jobPostSchema = z.object({
 	title: z.string().min(1, "Job title is required"),
@@ -35,12 +43,7 @@ interface JobPostFormProps {
 export function JobPostForm({ jobPost, onSave, onCancel }: JobPostFormProps) {
 	const [isLoading, setIsLoading] = useState(false);
 
-	const {
-		register,
-		handleSubmit,
-		control,
-		formState: { errors },
-	} = useForm<JobPostFormData>({
+	const form = useForm<JobPostFormData>({
 		resolver: zodResolver(jobPostSchema),
 		defaultValues: {
 			title: jobPost?.title || "",
@@ -49,15 +52,9 @@ export function JobPostForm({ jobPost, onSave, onCancel }: JobPostFormProps) {
 			employmentType: jobPost?.employmentType || undefined,
 			experienceLevel: jobPost?.experienceLevel || undefined,
 			description: jobPost?.description || "",
-			requirements: jobPost?.requirements.map((req) => ({ value: req })) || [
-				{ value: "" },
-			],
-			responsibilities: jobPost?.responsibilities.map((resp) => ({
-				value: resp,
-			})) || [{ value: "" }],
-			benefits: jobPost?.benefits.map((benefit) => ({ value: benefit })) || [
-				{ value: "" },
-			],
+			requirements: jobPost?.requirements?.map((req) => ({ value: req })) || [{ value: "" }],
+			responsibilities: jobPost?.responsibilities?.map((resp) => ({ value: resp })) || [{ value: "" }],
+			benefits: jobPost?.benefits?.map((benefit) => ({ value: benefit })) || [{ value: "" }],
 			salaryRange: jobPost?.salaryRange || "",
 		},
 	});
@@ -67,7 +64,7 @@ export function JobPostForm({ jobPost, onSave, onCancel }: JobPostFormProps) {
 		append: appendRequirement,
 		remove: removeRequirement,
 	} = useFieldArray({
-		control,
+		control: form.control,
 		name: "requirements",
 	});
 
@@ -76,7 +73,7 @@ export function JobPostForm({ jobPost, onSave, onCancel }: JobPostFormProps) {
 		append: appendResponsibility,
 		remove: removeResponsibility,
 	} = useFieldArray({
-		control,
+		control: form.control,
 		name: "responsibilities",
 	});
 
@@ -85,326 +82,368 @@ export function JobPostForm({ jobPost, onSave, onCancel }: JobPostFormProps) {
 		append: appendBenefit,
 		remove: removeBenefit,
 	} = useFieldArray({
-		control,
+		control: form.control,
 		name: "benefits",
 	});
 
 	const onSubmit = async (data: JobPostFormData) => {
 		setIsLoading(true);
-
-		const formattedData: CreateJobPostData = {
-			title: data.title,
-			department: data.department || undefined,
-			location: data.location || undefined,
-			employmentType: data.employmentType,
-			experienceLevel: data.experienceLevel,
-			description: data.description,
-			requirements:
-				data.requirements?.map((req) => req.value).filter(Boolean) || [],
-			responsibilities:
-				data.responsibilities?.map((resp) => resp.value).filter(Boolean) || [],
-			benefits:
-				data.benefits?.map((benefit) => benefit.value).filter(Boolean) || [],
-			salaryRange: data.salaryRange || undefined,
-		};
-
 		try {
+			const formattedData: CreateJobPostData = {
+				title: data.title,
+				department: data.department || undefined,
+				location: data.location || undefined,
+				employmentType: data.employmentType || undefined,
+				experienceLevel: data.experienceLevel || undefined,
+				description: data.description,
+				requirements: data.requirements?.filter(req => req.value.trim()).map(req => req.value) || [],
+				responsibilities: data.responsibilities?.filter(resp => resp.value.trim()).map(resp => resp.value) || [],
+				benefits: data.benefits?.filter(benefit => benefit.value.trim()).map(benefit => benefit.value) || [],
+				salaryRange: data.salaryRange || undefined,
+			};
 			onSave(formattedData);
+		} catch (error) {
+			console.error("Error submitting job post:", error);
 		} finally {
 			setIsLoading(false);
 		}
 	};
 
 	return (
-		<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-			<div className="bg-background border border-border rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-				<div className="p-6">
-					<div className="flex justify-between items-center mb-6">
-						<h2 className="text-xl font-semibold text-foreground">
-							{jobPost ? "Edit Job Post" : "Create New Job Post"}
-						</h2>
-						<button
-							onClick={onCancel}
-							className="text-muted-foreground hover:text-foreground transition-colors"
-						>
-							<svg
-								className="w-6 h-6"
-								fill="none"
-								stroke="currentColor"
-								viewBox="0 0 24 24"
-							>
-								<path
-									strokeLinecap="round"
-									strokeLinejoin="round"
-									strokeWidth={2}
-									d="M6 18L18 6M6 6l12 12"
-								/>
-							</svg>
-						</button>
-					</div>
-
-					<form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+		<Card className="max-w-4xl mx-auto">
+			<CardHeader>
+				<CardTitle>{jobPost ? "Edit Job Post" : "Create New Job Post"}</CardTitle>
+				<CardDescription>
+					{jobPost ? "Update job posting details" : "Fill in the details for your new job posting"}
+				</CardDescription>
+			</CardHeader>
+			<CardContent>
+				<Form {...form}>
+					<form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
 						{/* Basic Information */}
-						<div className="grid md:grid-cols-2 gap-4">
-							<div>
-								<label
-									htmlFor="title"
-									className="block text-sm font-medium text-foreground mb-1"
-								>
-									Job Title *
-								</label>
-								<input
-									{...register("title")}
-									id="title"
-									type="text"
-									className="w-full px-3 py-2 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent bg-background text-foreground"
-									placeholder="e.g., Software Engineer Intern"
+						<div className="space-y-4">
+							<div className="space-y-2">
+								<h3 className="text-lg font-medium">Basic Information</h3>
+								<Separator />
+							</div>
+
+							<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+								<FormField
+									control={form.control}
+									name="title"
+									render={({ field }) => (
+										<FormItem>
+											<FormLabel>Job Title *</FormLabel>
+											<FormControl>
+												<Input placeholder="e.g., Software Engineer" disabled={isLoading} {...field} />
+											</FormControl>
+											<FormMessage />
+										</FormItem>
+									)}
 								/>
-								{errors.title && (
-									<p className="text-sm text-destructive mt-1">
-										{errors.title.message}
-									</p>
-								)}
-							</div>
 
-							<div>
-								<label
-									htmlFor="department"
-									className="block text-sm font-medium text-foreground mb-1"
-								>
-									Department
-								</label>
-								<input
-									{...register("department")}
-									id="department"
-									type="text"
-									className="w-full px-3 py-2 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent bg-background text-foreground"
-									placeholder="e.g., Engineering"
+								<FormField
+									control={form.control}
+									name="department"
+									render={({ field }) => (
+										<FormItem>
+											<FormLabel>Department</FormLabel>
+											<FormControl>
+												<Input placeholder="e.g., Engineering" disabled={isLoading} {...field} />
+											</FormControl>
+											<FormMessage />
+										</FormItem>
+									)}
 								/>
-							</div>
 
-							<div>
-								<label
-									htmlFor="location"
-									className="block text-sm font-medium text-foreground mb-1"
-								>
-									Location
-								</label>
-								<input
-									{...register("location")}
-									id="location"
-									type="text"
-									className="w-full px-3 py-2 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent bg-background text-foreground"
-									placeholder="e.g., San Francisco, CA / Remote"
+								<FormField
+									control={form.control}
+									name="location"
+									render={({ field }) => (
+										<FormItem>
+											<FormLabel>Location</FormLabel>
+											<FormControl>
+												<Input placeholder="e.g., San Francisco, CA / Remote" disabled={isLoading} {...field} />
+											</FormControl>
+											<FormMessage />
+										</FormItem>
+									)}
 								/>
-							</div>
 
-							<div>
-								<label
-									htmlFor="employmentType"
-									className="block text-sm font-medium text-foreground mb-1"
-								>
-									Employment Type
-								</label>
-								<select
-									{...register("employmentType")}
-									id="employmentType"
-									className="w-full px-3 py-2 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent bg-background text-foreground"
-								>
-									<option value="">Select type</option>
-									<option value="full-time">Full-time</option>
-									<option value="part-time">Part-time</option>
-									<option value="contract">Contract</option>
-									<option value="internship">Internship</option>
-								</select>
-							</div>
+								<FormField
+									control={form.control}
+									name="salaryRange"
+									render={({ field }) => (
+										<FormItem>
+											<FormLabel>Salary Range</FormLabel>
+											<FormControl>
+												<Input placeholder="e.g., $80,000 - $120,000" disabled={isLoading} {...field} />
+											</FormControl>
+											<FormMessage />
+										</FormItem>
+									)}
+								/>
 
-							<div>
-								<label
-									htmlFor="experienceLevel"
-									className="block text-sm font-medium text-foreground mb-1"
-								>
-									Experience Level
-								</label>
-								<select
-									{...register("experienceLevel")}
-									id="experienceLevel"
-									className="w-full px-3 py-2 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent bg-background text-foreground"
-								>
-									<option value="">Select level</option>
-									<option value="entry">Entry Level</option>
-									<option value="mid">Mid Level</option>
-									<option value="senior">Senior Level</option>
-								</select>
-							</div>
+								<FormField
+									control={form.control}
+									name="employmentType"
+									render={({ field }) => (
+										<FormItem>
+											<FormLabel>Employment Type</FormLabel>
+											<Select onValueChange={field.onChange} value={field.value} disabled={isLoading}>
+												<FormControl>
+													<SelectTrigger>
+														<SelectValue placeholder="Select employment type" />
+													</SelectTrigger>
+												</FormControl>
+												<SelectContent>
+													<SelectItem value="full-time">Full-time</SelectItem>
+													<SelectItem value="part-time">Part-time</SelectItem>
+													<SelectItem value="contract">Contract</SelectItem>
+													<SelectItem value="internship">Internship</SelectItem>
+												</SelectContent>
+											</Select>
+											<FormMessage />
+										</FormItem>
+									)}
+								/>
 
-							<div>
-								<label
-									htmlFor="salaryRange"
-									className="block text-sm font-medium text-foreground mb-1"
-								>
-									Salary Range
-								</label>
-								<input
-									{...register("salaryRange")}
-									id="salaryRange"
-									type="text"
-									className="w-full px-3 py-2 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent bg-background text-foreground"
-									placeholder="e.g., $80,000 - $120,000"
+								<FormField
+									control={form.control}
+									name="experienceLevel"
+									render={({ field }) => (
+										<FormItem>
+											<FormLabel>Experience Level</FormLabel>
+											<Select onValueChange={field.onChange} value={field.value} disabled={isLoading}>
+												<FormControl>
+													<SelectTrigger>
+														<SelectValue placeholder="Select experience level" />
+													</SelectTrigger>
+												</FormControl>
+												<SelectContent>
+													<SelectItem value="entry">Entry Level</SelectItem>
+													<SelectItem value="mid">Mid Level</SelectItem>
+													<SelectItem value="senior">Senior Level</SelectItem>
+												</SelectContent>
+											</Select>
+											<FormMessage />
+										</FormItem>
+									)}
 								/>
 							</div>
 						</div>
 
-						{/* Description */}
-						<div>
-							<label
-								htmlFor="description"
-								className="block text-sm font-medium text-foreground mb-1"
-							>
-								Job Description *
-							</label>
-							<textarea
-								{...register("description")}
-								id="description"
-								rows={4}
-								className="w-full px-3 py-2 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent bg-background text-foreground"
-								placeholder="Describe the role, company culture, and what makes this position exciting..."
+						{/* Job Description */}
+						<div className="space-y-4">
+							<div className="space-y-2">
+								<h3 className="text-lg font-medium">Job Description</h3>
+								<Separator />
+							</div>
+
+							<FormField
+								control={form.control}
+								name="description"
+								render={({ field }) => (
+									<FormItem>
+										<FormLabel>Description *</FormLabel>
+										<FormControl>
+											<Textarea
+												placeholder="Describe the role, company culture, and what makes this position exciting..."
+												className="min-h-[120px] resize-none"
+												disabled={isLoading}
+												{...field}
+											/>
+										</FormControl>
+										<FormMessage />
+									</FormItem>
+								)}
 							/>
-							{errors.description && (
-								<p className="text-sm text-destructive mt-1">
-									{errors.description.message}
-								</p>
-							)}
 						</div>
 
 						{/* Requirements */}
-						<div>
-							<div className="flex justify-between items-center mb-2">
-								<label className="block text-sm font-medium text-foreground">
-									Requirements
-								</label>
-								<button
-									type="button"
-									onClick={() => appendRequirement({ value: "" })}
-									className="text-sm text-primary hover:text-primary/80"
-								>
-									+ Add Requirement
-								</button>
-							</div>
+						<div className="space-y-4">
 							<div className="space-y-2">
+								<h3 className="text-lg font-medium">Requirements</h3>
+								<Separator />
+								<p className="text-sm text-muted-foreground">
+									List the key qualifications and skills required for this position
+								</p>
+							</div>
+
+							<div className="space-y-3">
 								{requirementFields.map((field, index) => (
 									<div key={field.id} className="flex gap-2">
-										<input
-											{...register(`requirements.${index}.value`)}
-											type="text"
-											className="flex-1 px-3 py-2 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent bg-background text-foreground"
-											placeholder="e.g., Bachelor's degree in Computer Science"
+										<FormField
+											control={form.control}
+											name={`requirements.${index}.value`}
+											render={({ field }) => (
+												<FormItem className="flex-1">
+													<FormControl>
+														<Input
+															placeholder={`Requirement ${index + 1}`}
+															disabled={isLoading}
+															{...field}
+														/>
+													</FormControl>
+													<FormMessage />
+												</FormItem>
+											)}
 										/>
-										<button
+										<Button
 											type="button"
+											variant="outline"
+											size="sm"
 											onClick={() => removeRequirement(index)}
-											className="text-red-600 hover:text-red-800 px-2"
+											disabled={isLoading || requirementFields.length <= 1}
+											className="shrink-0"
 										>
-											Remove
-										</button>
+											<X className="h-4 w-4" />
+										</Button>
 									</div>
 								))}
+								<Button
+									type="button"
+									variant="outline"
+									size="sm"
+									onClick={() => appendRequirement({ value: "" })}
+									disabled={isLoading}
+									className="w-full"
+								>
+									<Plus className="h-4 w-4 mr-2" />
+									Add Requirement
+								</Button>
 							</div>
 						</div>
 
 						{/* Responsibilities */}
-						<div>
-							<div className="flex justify-between items-center mb-2">
-								<label className="block text-sm font-medium text-foreground">
-									Responsibilities
-								</label>
-								<button
-									type="button"
-									onClick={() => appendResponsibility({ value: "" })}
-									className="text-sm text-primary hover:text-primary/80"
-								>
-									+ Add Responsibility
-								</button>
-							</div>
+						<div className="space-y-4">
 							<div className="space-y-2">
+								<h3 className="text-lg font-medium">Responsibilities</h3>
+								<Separator />
+								<p className="text-sm text-muted-foreground">
+									Outline the key duties and responsibilities for this role
+								</p>
+							</div>
+
+							<div className="space-y-3">
 								{responsibilityFields.map((field, index) => (
 									<div key={field.id} className="flex gap-2">
-										<input
-											{...register(`responsibilities.${index}.value`)}
-											type="text"
-											className="flex-1 px-3 py-2 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent bg-background text-foreground"
-											placeholder="e.g., Develop and maintain web applications"
+										<FormField
+											control={form.control}
+											name={`responsibilities.${index}.value`}
+											render={({ field }) => (
+												<FormItem className="flex-1">
+													<FormControl>
+														<Input
+															placeholder={`Responsibility ${index + 1}`}
+															disabled={isLoading}
+															{...field}
+														/>
+													</FormControl>
+													<FormMessage />
+												</FormItem>
+											)}
 										/>
-										<button
+										<Button
 											type="button"
+											variant="outline"
+											size="sm"
 											onClick={() => removeResponsibility(index)}
-											className="text-red-600 hover:text-red-800 px-2"
+											disabled={isLoading || responsibilityFields.length <= 1}
+											className="shrink-0"
 										>
-											Remove
-										</button>
+											<X className="h-4 w-4" />
+										</Button>
 									</div>
 								))}
+								<Button
+									type="button"
+									variant="outline"
+									size="sm"
+									onClick={() => appendResponsibility({ value: "" })}
+									disabled={isLoading}
+									className="w-full"
+								>
+									<Plus className="h-4 w-4 mr-2" />
+									Add Responsibility
+								</Button>
 							</div>
 						</div>
 
 						{/* Benefits */}
-						<div>
-							<div className="flex justify-between items-center mb-2">
-								<label className="block text-sm font-medium text-foreground">
-									Benefits
-								</label>
-								<button
-									type="button"
-									onClick={() => appendBenefit({ value: "" })}
-									className="text-sm text-primary hover:text-primary/80"
-								>
-									+ Add Benefit
-								</button>
-							</div>
+						<div className="space-y-4">
 							<div className="space-y-2">
+								<h3 className="text-lg font-medium">Benefits & Perks</h3>
+								<Separator />
+								<p className="text-sm text-muted-foreground">
+									Highlight the benefits and perks that come with this position
+								</p>
+							</div>
+
+							<div className="space-y-3">
 								{benefitFields.map((field, index) => (
 									<div key={field.id} className="flex gap-2">
-										<input
-											{...register(`benefits.${index}.value`)}
-											type="text"
-											className="flex-1 px-3 py-2 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent bg-background text-foreground"
-											placeholder="e.g., Health insurance, 401(k) matching"
+										<FormField
+											control={form.control}
+											name={`benefits.${index}.value`}
+											render={({ field }) => (
+												<FormItem className="flex-1">
+													<FormControl>
+														<Input
+															placeholder={`Benefit ${index + 1}`}
+															disabled={isLoading}
+															{...field}
+														/>
+													</FormControl>
+													<FormMessage />
+												</FormItem>
+											)}
 										/>
-										<button
+										<Button
 											type="button"
+											variant="outline"
+											size="sm"
 											onClick={() => removeBenefit(index)}
-											className="text-red-600 hover:text-red-800 px-2"
+											disabled={isLoading || benefitFields.length <= 1}
+											className="shrink-0"
 										>
-											Remove
-										</button>
+											<X className="h-4 w-4" />
+										</Button>
 									</div>
 								))}
+								<Button
+									type="button"
+									variant="outline"
+									size="sm"
+									onClick={() => appendBenefit({ value: "" })}
+									disabled={isLoading}
+									className="w-full"
+								>
+									<Plus className="h-4 w-4 mr-2" />
+									Add Benefit
+								</Button>
 							</div>
 						</div>
 
-						<div className="flex gap-3 pt-4">
-							<button
+						{/* Action Buttons */}
+						<div className="flex items-center justify-end gap-3 pt-6 border-t">
+							<Button
 								type="button"
+								variant="outline"
 								onClick={onCancel}
-								className="flex-1 px-4 py-2 text-sm font-medium text-muted-foreground bg-secondary hover:bg-secondary/80 rounded-md transition-colors"
-							>
-								Cancel
-							</button>
-							<button
-								type="submit"
 								disabled={isLoading}
-								className="flex-1 px-4 py-2 text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
 							>
-								{isLoading
-									? "Saving..."
-									: jobPost
-									? "Update Job Post"
-									: "Create Job Post"}
-							</button>
+								<XCircle className="h-4 w-4 mr-2" />
+								Cancel
+							</Button>
+							<Button type="submit" disabled={isLoading}>
+								<Save className="h-4 w-4 mr-2" />
+								{isLoading ? "Saving..." : jobPost ? "Update Job Post" : "Create Job Post"}
+							</Button>
 						</div>
 					</form>
-				</div>
-			</div>
-		</div>
+				</Form>
+			</CardContent>
+		</Card>
 	);
 }

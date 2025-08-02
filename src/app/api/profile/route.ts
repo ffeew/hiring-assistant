@@ -65,7 +65,10 @@ async function getProfile(request: AuthenticatedRequest) {
 
     console.error('Error fetching profile:', error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { 
+        error: 'Internal server error',
+        details: [{ field: 'server', message: 'Failed to fetch profile' }]
+      },
       { status: 500 }
     );
   }

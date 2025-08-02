@@ -1,111 +1,113 @@
 import { NextResponse } from "next/server";
-import { extractResumeData } from "./extract.service";
-import { findOrCreateApplicant, createResumeRecord, checkForDuplicateResume } from "./resume-extraction.service";
-import { r2Service } from "@/lib/r2";
-import { SUPPORTED_FILE_TYPES, type ExtractionResponseData } from "@/app/types";
+import { SUPPORTED_FILE_TYPES } from "@/app/types";
 import { SDKError } from "@mistralai/mistralai/models/errors/sdkerror";
 import { withAuth, AuthenticatedRequest } from "@/lib/auth-middleware";
+import { ZodError } from "zod";
+import { ExtractService } from "./extract.service";
+
+// ============================================================================
+// EXTRACT CONTROLLER - HTTP HANDLING ONLY
+// ============================================================================
 
 async function extractResumes(request: AuthenticatedRequest) {
   try {
+    // Parse form data
     const formData = await request.formData();
     const files = formData.getAll("files") as File[];
+    const jobPostId = formData.get("jobPostId") as string | null;
 
+    // Validate input
     if (!files || files.length === 0) {
       return NextResponse.json(
-        { error: "No files were uploaded." },
+        { 
+          error: "Validation failed",
+          details: [{ field: "files", message: "No files were uploaded." }]
+        },
         { status: 400 }
       );
     }
 
-    const extractedData = await Promise.allSettled(
-      files.map(async (file): Promise<ExtractionResponseData> => {
-        // Type narrowing to ensure file type is supported
-        if (!SUPPORTED_FILE_TYPES.includes(file.type as typeof SUPPORTED_FILE_TYPES[number])) {
-          throw new Error(`Unsupported file type: ${file.type} for file: ${file.name}`);
-        }
+    if (!jobPostId) {
+      return NextResponse.json(
+        { 
+          error: "Validation failed",
+          details: [{ field: "jobPostId", message: "Job post ID is required for resume uploads." }]
+        },
+        { status: 400 }
+      );
+    }
 
-        const fileBuffer = Buffer.from(await file.arrayBuffer());
-
-        // Check for duplicate resume before processing
-        const duplicateCheck = await checkForDuplicateResume(request.user.id, fileBuffer);
-
-        if (duplicateCheck.isDuplicate) {
-          // Return existing resume data without processing
-          return {
-            fileName: file.name,
-            resumeId: duplicateCheck.resumeId!,
-            applicantId: duplicateCheck.applicantId!,
-            firstName: duplicateCheck.firstName!,
-            lastName: duplicateCheck.lastName!,
-            email: duplicateCheck.email!,
-            template: 'screening',
-          };
-        }
-
-        // Extract resume data using Mistral OCR
-        const { extractedText, structuredResumeData } = await extractResumeData(fileBuffer, file.type as typeof SUPPORTED_FILE_TYPES[number]);
-
-        // Upload file to R2
-        const uploadResult = await r2Service.uploadFile(
-          fileBuffer,
-          file.name,
-          file.type,
-          request.user.id
-        );
-
-        // Find or create applicant based on email
-        const applicantId = await findOrCreateApplicant(request.user.id, structuredResumeData);
-
-        // Create resume record in database with file hash
-        const resumeId = await createResumeRecord(
-          applicantId,
-          file.name,
-          uploadResult.filePath,
-          file.size,
-          file.type,
-          extractedText,
-          duplicateCheck.fileHash
-        );
-
-        return {
-          fileName: file.name,
-          resumeId,
-          applicantId,
-          firstName: structuredResumeData.firstName,
-          lastName: structuredResumeData.lastName,
-          email: structuredResumeData.email,
-          template: 'screening', // Default template
-        };
-      })
+    // Validate file types
+    const unsupportedFiles = files.filter(file => 
+      !SUPPORTED_FILE_TYPES.includes(file.type as typeof SUPPORTED_FILE_TYPES[number])
     );
 
-    // Process results and separate successful extractions from errors
-    const results: ExtractionResponseData[] = extractedData.map((result, index) => {
-      if (result.status === 'fulfilled') {
-        return result.value;
-      } else {
-        console.error(`Error processing file ${files[index].name}:`, result.reason);
+    if (unsupportedFiles.length > 0) {
+      return NextResponse.json(
+        { 
+          error: "Validation failed",
+          details: unsupportedFiles.map(file => ({
+            field: "files",
+            message: `Unsupported file type: ${file.type} for file: ${file.name}`
+          }))
+        },
+        { status: 400 }
+      );
+    }
 
-        // result.reason is an SDKError, we can extract the message
-        if (result.reason instanceof SDKError) {
-          return {
-            fileName: files[index].name,
-            error: JSON.parse(result.reason.body).message
-          };
-        }
-        return {
-          fileName: files[index].name,
-          error: result.reason instanceof Error ? result.reason.message : 'Unknown error occurred'
-        };
-      }
-    });
+    // Process resumes using service layer
+    const results = await ExtractService.processResumes(
+      request.user.id,
+      files,
+      jobPostId
+    );
 
     return NextResponse.json(results);
+    
   } catch (error) {
-    console.error("Error extracting data:", error);
+    console.error("Error in extract controller:", error);
+
+    // Handle specific error types
+    if (error instanceof ZodError) {
+      return NextResponse.json(
+        {
+          error: "Validation failed",
+          details: error.errors.map((e) => ({
+            field: e.path.join("."),
+            message: e.message,
+          })),
+        },
+        { status: 400 }
+      );
+    }
+
+    if (error instanceof SDKError) {
+      try {
+        const errorBody = JSON.parse(error.body);
+        return NextResponse.json(
+          { 
+            error: "External service error",
+            details: [{ field: "mistral", message: errorBody.message || "Mistral API error" }]
+          },
+          { status: 422 }
+        );
+      } catch {
+        return NextResponse.json(
+          { 
+            error: "External service error",
+            details: [{ field: "mistral", message: "Failed to process with Mistral API" }]
+          },
+          { status: 422 }
+        );
+      }
+    }
+
+    // Generic error
     return NextResponse.json(
-      { error: "Failed to extract data from resumes." },
+      { 
+        error: "Internal server error",
+        details: [{ field: "server", message: "Failed to extract data from resumes." }]
+      },
       { status: 500 }
     );
   }

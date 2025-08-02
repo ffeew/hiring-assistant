@@ -2,11 +2,30 @@
 
 import { LoadingSpinner } from "./loading-spinner";
 import type { EmailPreviewResponse } from "@/lib/api-client";
-import { EmailTemplate } from "../types";
+import {
+	Dialog,
+	DialogContent,
+	DialogDescription,
+	DialogHeader,
+	DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import {
+	Card,
+	CardContent,
+	CardDescription,
+	CardHeader,
+	CardTitle,
+} from "@/components/ui/card";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Separator } from "@/components/ui/separator";
+import { Mail, Send, User, X } from "lucide-react";
 
 type EmailPreviewModalProps = {
-	emailPreviews: EmailPreviewResponse['previews'];
+	emailPreviews: EmailPreviewResponse["previews"];
 	isLoading: boolean;
+	isOpen: boolean;
 	onClose: () => void;
 	onSendEmails: () => void;
 };
@@ -14,121 +33,115 @@ type EmailPreviewModalProps = {
 export function EmailPreviewModal({
 	emailPreviews,
 	isLoading,
+	isOpen,
 	onClose,
 	onSendEmails,
 }: EmailPreviewModalProps) {
-	if (emailPreviews.length === 0) {
-		return null;
-	}
+	const getTemplateBadgeVariant = (template: string) => {
+		switch (template) {
+			case "acknowledgment":
+				return "secondary" as const;
+			case "screening":
+				return "default" as const;
+			default:
+				return "outline" as const;
+		}
+	};
 
 	return (
-		<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-			<div className="max-w-4xl w-full max-h-[90vh] rounded-lg shadow-2xl flex flex-col bg-card text-card-foreground border border-border">
-				{/* Header */}
-				<div className="flex justify-between items-center p-6 border-b border-border">
-					<h2 className="text-2xl font-semibold flex items-center text-foreground">
-						<span className="mr-2">📧</span>
+		<Dialog open={isOpen} onOpenChange={onClose}>
+			<DialogContent className="md:max-w-6xl max-h-[95vh] flex flex-col">
+				<DialogHeader>
+					<DialogTitle className="flex items-center gap-2">
+						<Mail className="h-5 w-5" />
 						Email Preview ({emailPreviews.length} recipient
 						{emailPreviews.length !== 1 ? "s" : ""})
-					</h2>
-					<button
-						onClick={onClose}
-						className="text-2xl hover:opacity-70 transition-opacity text-muted-foreground"
-					>
-						✕
-					</button>
-				</div>
+					</DialogTitle>
+					<DialogDescription>
+						Review the email content before sending to candidates
+					</DialogDescription>
+				</DialogHeader>
 
-				{/* Content */}
-				<div className="flex-1 overflow-y-auto p-6">
-					<div className="space-y-6">
+				<ScrollArea className="flex-1">
+					<div className="flex flex-col gap-4">
 						{emailPreviews.map((preview, index) => (
-							<div
-								key={index}
-								className="border rounded-lg overflow-hidden border-border"
-							>
-								{/* Email Header Info */}
-								<div className="p-4 border-b bg-muted border-border">
-									<div className="grid grid-cols-3 gap-4 text-sm">
-										<div>
-											<span className="font-medium text-muted-foreground">
-												To:
-											</span>
-											<span className="text-foreground">
-												{preview.recipient.firstName}{" "}
-												{preview.recipient.lastName} &lt;
-												{preview.recipient.email}&gt;
-											</span>
-										</div>
-										<div>
-											<span className="font-medium text-muted-foreground">
-												Subject:
-											</span>
-											<span className="text-foreground">{preview.subject}</span>
-										</div>
-										<div>
-											<span className="font-medium text-muted-foreground">
-												Template:
-											</span>
-											<span className="text-foreground inline-flex items-center">
-												{(preview.recipient.template ||
-													EmailTemplate.SCREENING) ===
-												EmailTemplate.SCREENING ? (
-													<>🔍 Screening Questions</>
-												) : (
-													<>📧 Acknowledgment</>
-												)}
-											</span>
+							<Card key={index}>
+								<CardHeader>
+									<div className="flex items-center justify-between">
+										<div className="flex items-center gap-3">
+											<div className="flex items-center gap-2">
+												<User className="h-4 w-4" />
+												<CardTitle className="text-base">
+													{preview.recipient.firstName}{" "}
+													{preview.recipient.lastName}
+												</CardTitle>
+											</div>
+											<Badge
+												variant={getTemplateBadgeVariant(preview.template)}
+											>
+												{preview.template}
+											</Badge>
 										</div>
 									</div>
-								</div>
+									<CardDescription>
+										To: {preview.recipient.email}
+										{preview.recipient.jobPosition && (
+											<span> • Position: {preview.recipient.jobPosition}</span>
+										)}
+									</CardDescription>
+								</CardHeader>
+								<CardContent>
+									<div className="flex flex-col gap-4">
+										<div className="flex flex-col">
+											<div className="text-sm font-medium text-muted-foreground mb-1">
+												Subject
+											</div>
+											<div className="font-medium">{preview.subject}</div>
+										</div>
 
-								{/* Email Content */}
-								<div
-									className="h-96 overflow-y-auto"
-									style={{ backgroundColor: "white" }}
-								>
-									<iframe
-										srcDoc={preview.html}
-										className="w-full h-full border-0"
-										title={`Email preview for ${preview.recipient.firstName} ${preview.recipient.lastName}`}
-									/>
-								</div>
-							</div>
+										<Separator />
+
+										<div className="flex flex-col">
+											<div className="text-sm font-medium text-muted-foreground mb-2">
+												Email Content
+											</div>
+
+											<iframe
+												srcDoc={preview.html}
+												className="w-full h-96 border-0 rounded-md"
+												sandbox="allow-same-origin"
+												title={`Email preview for ${preview.recipient.firstName} ${preview.recipient.lastName}`}
+											/>
+										</div>
+									</div>
+								</CardContent>
+							</Card>
 						))}
 					</div>
-				</div>
+				</ScrollArea>
 
-				{/* Footer */}
-				<div className="flex justify-between items-center p-6 border-t border-border">
-					<button
-						onClick={onClose}
-						className="px-6 py-2 font-semibold rounded-full transition-all duration-300 bg-muted text-muted-foreground hover:bg-muted/80"
-					>
+				<Separator />
+
+				<div className="flex items-center justify-end gap-3 pt-4">
+					<Button variant="outline" onClick={onClose} disabled={isLoading}>
+						<X className="h-4 w-4" />
 						Cancel
-					</button>
-
-					<button
-						onClick={onSendEmails}
-						disabled={isLoading}
-						className={`px-6 py-2 font-semibold rounded-full transition-all duration-300 flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed ${
-							isLoading
-								? "bg-muted text-muted-foreground"
-								: "bg-secondary text-white hover:bg-secondary-hover"
-						}`}
-					>
-						{isLoading && <LoadingSpinner size="w-4 h-4" />}
-						<span>📧</span>
-						<span>
-							{isLoading
-								? "Sending..."
-								: `Send ${emailPreviews.length} Email${
-										emailPreviews.length !== 1 ? "s" : ""
-								  }`}
-						</span>
-					</button>
+					</Button>
+					<Button onClick={onSendEmails} disabled={isLoading}>
+						{isLoading ? (
+							<>
+								<LoadingSpinner />
+								Sending...
+							</>
+						) : (
+							<>
+								<Send className="h-4 w-4" />
+								Send All Emails
+							</>
+						)}
+					</Button>
 				</div>
-			</div>
-		</div>
+			</DialogContent>
+		</Dialog>
 	);
 }

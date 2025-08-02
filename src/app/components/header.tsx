@@ -45,6 +45,9 @@ export function Header() {
 						<Link href="/job-posts" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
 							Job Posts
 						</Link>
+						<Link href="/interview-assistant" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+							Interview Assistant
+						</Link>
 					</nav>
 				)}
 			</div>

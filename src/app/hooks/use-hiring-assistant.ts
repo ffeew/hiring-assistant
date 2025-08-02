@@ -1,11 +1,22 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import type { ExtractedData, JobPost } from "../types";
+import type { ExtractedData, SuccessfulExtractionData, JobPost } from "../types";
 import { EmailTemplate } from "../types";
 import { useJobPosts } from "./use-job-posts";
 import { useExtractResumesMutation, useSendEmailsMutation, useEmailPreviewMutation } from "./use-api-mutations";
 import type { EmailPreviewResponse } from "@/lib/api-client";
+
+// Type guard to check if extraction was successful
+function isSuccessfulExtraction(data: ExtractedData): data is SuccessfulExtractionData {
+  return !data.error && 
+         !!data.resumeId && 
+         !!data.applicantId && 
+         !!data.firstName && 
+         !!data.lastName && 
+         !!data.email && 
+         !!data.template;
+}
 
 export function useHiringAssistant() {
   const [files, setFiles] = useState<File[]>([]);
@@ -42,8 +53,21 @@ export function useHiringAssistant() {
       return;
     }
 
+    if (!selectedJobPost && !customJobPosition.trim()) {
+      alert("Please select a job post or enter a custom position before uploading resumes.");
+      return;
+    }
+
+    if (!selectedJobPost) {
+      alert("Please select an existing job post. Custom positions are not supported for resume uploads. Create a job post first.");
+      return;
+    }
+
     try {
-      const result = await extractResumesMutation.mutateAsync(files);
+      const result = await extractResumesMutation.mutateAsync({
+        files,
+        jobPostId: selectedJobPost.id
+      });
       
       // Initialize template field to SCREENING as default for all extracted data
       // Only add template for successful extractions (those without errors)
@@ -66,7 +90,7 @@ export function useHiringAssistant() {
   };
 
   const handleSendEmails = async () => {
-    const successfulExtractions = extractedData.filter(data => !data.error && data.resumeId && data.applicantId);
+    const successfulExtractions = extractedData.filter(isSuccessfulExtraction);
     if (successfulExtractions.length === 0) {
       alert("No successful extractions to send emails to.");
       return;
@@ -80,8 +104,8 @@ export function useHiringAssistant() {
           email: data.email,
           template: data.template,
           jobPosition: selectedJobPost?.title || customJobPosition,
-          resumeId: data.resumeId!,
-          applicantId: data.applicantId!,
+          resumeId: data.resumeId,
+          applicantId: data.applicantId,
         })),
         jobPostId: selectedJobPost?.id,
       };
@@ -111,7 +135,7 @@ export function useHiringAssistant() {
   };
 
   const handlePreviewEmails = async () => {
-    const successfulExtractions = extractedData.filter(data => !data.error);
+    const successfulExtractions = extractedData.filter(isSuccessfulExtraction);
     if (successfulExtractions.length === 0) {
       alert("No successful extractions to preview emails for.");
       return;

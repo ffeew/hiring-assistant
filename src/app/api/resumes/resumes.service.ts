@@ -4,7 +4,7 @@ import { resumeFile as resumeFileTable, applicant as applicantTable } from '@/li
 import { r2Service } from '@/lib/r2';
 import { randomUUID } from 'node:crypto';
 import { SUPPORTED_FILE_TYPES } from '@/app/types';
-import { eq } from 'drizzle-orm';
+import { eq, isNotNull } from 'drizzle-orm';
 import { withNotDeleted, softDeleteData } from '@/lib/soft-delete';
 import type { GetResumeFilesQuery } from './resumes.validator';
 
@@ -65,14 +65,15 @@ export class ResumesService {
     const { applicantId } = query;
 
     if (applicantId) {
-      // Get resume files for specific applicant (excluding soft-deleted)
+      // Get resume files for specific applicant (excluding soft-deleted and null jobPostId)
       const resumeFiles = await db
         .select()
         .from(resumeFileTable)
         .where(
           withNotDeleted(
             resumeFileTable.deletedAt,
-            eq(resumeFileTable.applicantId, applicantId)
+            eq(resumeFileTable.applicantId, applicantId),
+            isNotNull(resumeFileTable.jobPostId)
           )
         );
 
@@ -82,11 +83,12 @@ export class ResumesService {
         url: r2Service.getPublicUrl(file.filePath),
       }));
     } else if (userId) {
-      // Get all resume files for the user (via applicant relationship)
+      // Get all resume files for the user (via applicant relationship, excluding null jobPostId)
       const resumeFiles = await db
         .select({
           id: resumeFileTable.id,
           applicantId: resumeFileTable.applicantId,
+          jobPostId: resumeFileTable.jobPostId,
           fileName: resumeFileTable.fileName,
           filePath: resumeFileTable.filePath,
           fileSize: resumeFileTable.fileSize,
@@ -106,7 +108,8 @@ export class ResumesService {
         .where(
           withNotDeleted(
             resumeFileTable.deletedAt,
-            eq(applicantTable.userId, userId)
+            eq(applicantTable.userId, userId),
+            isNotNull(resumeFileTable.jobPostId)
           )
         );
 

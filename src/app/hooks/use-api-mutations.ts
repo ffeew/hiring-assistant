@@ -14,7 +14,8 @@ const QUERY_KEYS = {
 // Resume extraction mutation
 export function useExtractResumesMutation() {
   return useMutation({
-    mutationFn: (files: File[]) => apiClient.extractResumes(files),
+    mutationFn: ({ files, jobPostId }: { files: File[]; jobPostId: string }) => 
+      apiClient.extractResumes(files, jobPostId),
     mutationKey: ['extract-resumes'],
   });
 }

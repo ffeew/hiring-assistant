@@ -10,6 +10,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `npm run build` - Build for production
 - `npm start` - Start production server
 - `npm run lint` - Run ESLint
+- `npm run typecheck` - Run TypeScript type checking without emitting files
 
 ### Database
 
@@ -31,11 +32,11 @@ This is a **Next.js 15 hiring assistant application** that automates resume proc
 
 **AI-Powered Resume Processing Pipeline**
 
-- `src/app/api/extract/extract.service.ts` - Mistral AI OCR integration for PDF/DOCX resume parsing
-- `src/app/api/extract/route.ts` - API endpoint with authentication and error handling
-- Supports bulk resume upload with structured data extraction (firstName, lastName, email)
-- Uses Promise.allSettled for concurrent file processing with individual error handling
-- Structured output via Zod schemas with Mistral's responseFormatFromZodObject
+- `src/app/api/extract/` - Follows 3-layer architecture with `extract.validator.ts`, `extract.service.ts`, and `route.ts`
+- Mistral AI OCR integration for PDF/DOCX resume parsing with structured data extraction
+- Supports bulk resume upload with concurrent file processing using Promise.allSettled
+- Type-safe JSON handling for metadata parsing with `@/lib/json-utils.ts`
+- Duplicate detection via file hashing with R2 storage integration
 
 **Email Communication System**
 
@@ -93,7 +94,7 @@ src/app/api/example/
 └── route.ts               # HTTP controller
 ```
 
-**Controller Pattern:**
+**Controller Pattern (ENFORCED STANDARD):**
 
 ```typescript
 async function createExample(request: AuthenticatedRequest) {
@@ -103,6 +104,7 @@ async function createExample(request: AuthenticatedRequest) {
 		const result = await ExampleService.create(request.user.id, validatedData);
 		return NextResponse.json({ success: true, data: result });
 	} catch (error) {
+		// Standardized error handling - ALL controllers must follow this pattern
 		if (error instanceof ZodError) {
 			return NextResponse.json(
 				{
@@ -115,7 +117,27 @@ async function createExample(request: AuthenticatedRequest) {
 				{ status: 400 }
 			);
 		}
-		// Handle business logic errors...
+
+		// Business logic errors
+		if (error instanceof Error && error.message.includes('specific-condition')) {
+			return NextResponse.json(
+				{ 
+					error: 'Business logic error',
+					details: [{ field: 'fieldName', message: error.message }]
+				},
+				{ status: 400 }
+			);
+		}
+
+		// Generic server errors
+		console.error('Error in createExample:', error);
+		return NextResponse.json(
+			{ 
+				error: 'Internal server error',
+				details: [{ field: 'server', message: 'Failed to create example' }]
+			},
+			{ status: 500 }
+		);
 	}
 }
 ```
@@ -150,19 +172,19 @@ async function createExample(request: AuthenticatedRequest) {
 - Automatic encryption/decryption in API layer with password masking in responses
 - `src/lib/crypto.ts` provides secure encryption utilities with authentication
 
-**Error Handling Strategy**
+**Error Handling Strategy (ENFORCED STANDARD)**
 
-- API routes use Promise.allSettled for graceful failure handling
-- Individual file processing errors don't block other files
-- Mistral SDK errors are parsed and returned with meaningful messages
-- Email sending tracks success/failure counts with detailed error reporting
+- **Consistent Error Format**: All API routes return `{ error: string, details: Array<{ field: string, message: string }> }`
+- **Type-Safe Error Handling**: ZodError, SDKError, and business logic errors handled uniformly
+- **Graceful Failure Handling**: Promise.allSettled for concurrent operations
+- **Field-Specific Errors**: Detailed error information for better debugging and user experience
 
 **AI Integration Architecture**
 
-- Recent addition of `@ai-sdk/groq` and `ai` packages (v4.3.19) suggests planned Groq AI integration
-- Current implementation uses Mistral AI OCR with structured output
-- File type validation ensures only supported formats (PDF/DOCX) are processed
-- Base64 encoding for PDFs, file upload for DOCX documents to Mistral
+- **Mistral AI**: OCR for resume parsing with structured output via Zod schemas
+- **Groq AI**: Interview assistant for generating screening questions (`@ai-sdk/groq`)
+- **Type-Safe AI Responses**: All AI outputs validated with Zod schemas before processing
+- **File Processing**: Supports PDF (base64) and DOCX (file upload) with type validation
 
 ### API Routes Structure
 
@@ -182,17 +204,21 @@ All API routes follow the validator/service/controller pattern:
 
 ## Development Guidelines
 
-### API Development Rules
+### API Development Rules (ENFORCED STANDARDS)
 
 When creating or modifying API routes, you MUST:
 
 1. **Follow the 3-layer pattern** - Always create validator, service, and controller layers
 2. **Reuse existing Zod schemas** - Check `src/app/types/index.ts` first before creating new schemas
-3. **Use consistent error handling** - Always handle ZodError for validation failures
+3. **Use standardized error handling** - Return `{ error, details }` format for all errors
 4. **Implement proper authentication** - Use `withAuth` or `withAuthParams` middleware
 5. **Include soft delete support** - Use `withNotDeleted` and `softDeleteData` from `@/lib/soft-delete`
 6. **Use transactions** - Wrap database operations in `withTransaction` when needed
-7. **Parse JSON fields** - Always parse JSON strings from database for response (requirements, metadata, etc.)
+7. **Use type-safe JSON parsing** - Always use `@/lib/json-utils.ts` functions for JSON fields
+8. **Validate all inputs** - Use Zod schemas for comprehensive request validation
+9. **Handle concurrent operations** - Use Promise.allSettled for bulk operations
+10. **Maintain type safety** - Import types from validators, not from global types file
+11. **Verify type correctness** - Run `npm run typecheck` before committing changes
 
 ### File Naming Conventions
 
@@ -227,13 +253,419 @@ export class ExampleService {
 }
 ```
 
+### JSON Field Handling (ENFORCED STANDARD)
+
+All JSON fields stored in the database MUST use type-safe parsing utilities from `@/lib/json-utils.ts`:
+
+**Available Functions:**
+- `safeParseJSON<T>()` - Parse with schema validation and fallback
+- `safeParseJSONArray<T>()` - Parse JSON arrays with item validation
+- `safeParseJSONObject<T>()` - Parse JSON objects with schema validation
+
+**Pre-defined Schemas:**
+- `requirementsSchema` - For job post requirements arrays
+- `responsibilitiesSchema` - For job post responsibilities arrays
+- `benefitsSchema` - For job post benefits arrays
+- `applicantMetadataSchema` - For applicant metadata objects
+- `experienceSchema` / `educationSchema` - For nested resume data
+
+**Usage Example:**
+```typescript
+import { safeParseJSONArray, requirementsSchema } from '@/lib/json-utils';
+
+// Instead of: JSON.parse(jobPost.requirements) || []
+const requirements = safeParseJSONArray(jobPost.requirements, requirementsSchema);
+
+// Instead of: JSON.parse(applicant.metadata) || null  
+const metadata = safeParseJSONObject(applicant.metadata, applicantMetadataSchema);
+```
+
+**Benefits:**
+- ✅ Type safety with Zod validation
+- ✅ Graceful error handling with fallbacks
+- ✅ Consistent parsing across the application
+- ✅ Automatic logging of parsing failures
+
+### Type Management (ENFORCED STANDARD)
+
+**Type Import Strategy:**
+- Import types from their source validators: `import type { CreateJobPostBody } from './job-posts.validator'`
+- Global types in `@/app/types/index.ts` re-export validator types for frontend use
+- Never duplicate type definitions - always use single source of truth
+
+**Type Consolidation:**
+- `ExtractedData` is now an alias for `ExtractionResponseData` from extract validator
+- All API response types follow consistent patterns with optional fields
+- JSON field types validated with Zod schemas on parse operations
+
 ### Technology Stack
 
 - **Frontend**: Next.js 15, React 19, TypeScript, Tailwind CSS v4, next-themes
-- **Backend**: Next.js API routes, Nodemailer for email
-- **Database**: Drizzle ORM with LibSQL/Turso
+- **UI Components**: shadcn/ui with Radix UI primitives and Lucide React icons
+- **Backend**: Next.js API routes with 3-layer architecture (validator/service/controller)
+- **Database**: Drizzle ORM with LibSQL/Turso, soft delete support
 - **Data Fetching**: TanStack Query (React Query) for server state management
-- **Forms**: React Hook Form with Zod validation
-- **AI**: Mistral AI OCR, planned Groq integration via AI SDK
+- **Forms**: React Hook Form with Zod validation (mandatory pattern)
+- **AI**: Mistral AI OCR for resume parsing, Groq AI for interview questions
 - **Auth**: Better Auth with email/password authentication
-- **Email**: Gmail SMTP with template system
+- **Email**: Gmail SMTP with Nodemailer and template system
+- **File Storage**: Cloudflare R2 for resume file storage
+- **Validation**: Zod schemas for all data validation and type safety
+
+## UI Component System (shadcn/ui)
+
+This application uses **shadcn/ui** as the primary component library for consistent, accessible, and modern UI design.
+
+### Component Architecture
+
+**Component Location**: All shadcn/ui components are installed in `src/components/ui/` and imported from `@/components/ui/*`
+
+**Design System Features**:
+
+- Built on Radix UI primitives for accessibility
+- Fully customizable with CSS variables
+- Dark mode support with next-themes integration
+- TypeScript support with proper type definitions
+- Consistent design tokens and spacing
+
+### Installed Components
+
+The following shadcn/ui components are available and actively used:
+
+#### Core Components
+
+- **Button** (`@/components/ui/button`) - Primary actions, variants: default, destructive, outline, secondary, ghost, link
+- **Card** (`@/components/ui/card`) - Content containers with CardHeader, CardContent, CardDescription, CardTitle
+- **Badge** (`@/components/ui/badge`) - Status indicators, variants: default, secondary, destructive, outline
+- **Input** (`@/components/ui/input`) - Text inputs with proper validation states
+- **Textarea** (`@/components/ui/textarea`) - Multi-line text inputs
+
+#### Form Components
+
+- **Form** (`@/components/ui/form`) - Form wrapper with FormField, FormItem, FormLabel, FormControl, FormMessage
+- **Select** (`@/components/ui/select`) - Dropdown selections with SelectTrigger, SelectContent, SelectItem, SelectValue
+- **Alert** (`@/components/ui/alert`) - Status messages with AlertDescription, variants: default, destructive
+
+#### Layout Components
+
+- **Dialog** (`@/components/ui/dialog`) - Modal dialogs with DialogContent, DialogHeader, DialogTitle, DialogDescription
+- **Table** (`@/components/ui/table`) - Data tables with TableHeader, TableBody, TableRow, TableHead, TableCell
+- **Separator** (`@/components/ui/separator`) - Visual dividers
+- **ScrollArea** (`@/components/ui/scroll-area`) - Custom scrollable areas
+
+### Usage Patterns
+
+#### Form Pattern (MANDATORY)
+
+All forms MUST use React Hook Form + Zod + shadcn/ui Form components:
+
+```typescript
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import {
+	Form,
+	FormControl,
+	FormField,
+	FormItem,
+	FormLabel,
+	FormMessage,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+
+const schema = z.object({
+	email: z.string().email("Invalid email address"),
+	name: z.string().min(1, "Name is required"),
+});
+
+function ExampleForm() {
+	const form = useForm({
+		resolver: zodResolver(schema),
+		defaultValues: { email: "", name: "" },
+	});
+
+	return (
+		<Form {...form}>
+			<form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+				<FormField
+					control={form.control}
+					name="email"
+					render={({ field }) => (
+						<FormItem>
+							<FormLabel>Email</FormLabel>
+							<FormControl>
+								<Input placeholder="Enter email" {...field} />
+							</FormControl>
+							<FormMessage />
+						</FormItem>
+					)}
+				/>
+				<Button type="submit">Submit</Button>
+			</form>
+		</Form>
+	);
+}
+```
+
+#### Modal Pattern
+
+Use Dialog components for all modals with proper state management:
+
+```typescript
+import {
+	Dialog,
+	DialogContent,
+	DialogHeader,
+	DialogTitle,
+	DialogDescription,
+} from "@/components/ui/dialog";
+
+function ExampleModal({ isOpen, onClose, children }) {
+	return (
+		<Dialog open={isOpen} onOpenChange={onClose}>
+			<DialogContent>
+				<DialogHeader>
+					<DialogTitle>Modal Title</DialogTitle>
+					<DialogDescription>Modal description</DialogDescription>
+				</DialogHeader>
+				{children}
+			</DialogContent>
+		</Dialog>
+	);
+}
+```
+
+#### Table Pattern
+
+Use Table components for all data display:
+
+```typescript
+import {
+	Table,
+	TableBody,
+	TableCell,
+	TableHead,
+	TableHeader,
+	TableRow,
+} from "@/components/ui/table";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+
+function DataTable({ data }) {
+	return (
+		<Card>
+			<CardHeader>
+				<CardTitle>Data Table</CardTitle>
+			</CardHeader>
+			<CardContent>
+				<Table>
+					<TableHeader>
+						<TableRow>
+							<TableHead>Column 1</TableHead>
+							<TableHead>Column 2</TableHead>
+						</TableRow>
+					</TableHeader>
+					<TableBody>
+						{data.map((item) => (
+							<TableRow key={item.id}>
+								<TableCell>{item.field1}</TableCell>
+								<TableCell>{item.field2}</TableCell>
+							</TableRow>
+						))}
+					</TableBody>
+				</Table>
+			</CardContent>
+		</Card>
+	);
+}
+```
+
+### Component Guidelines
+
+#### Icon Usage
+
+- **Primary Icons**: Use Lucide React icons exclusively (`lucide-react`)
+- **Icon Sizing**: Standard sizes are h-3 w-3, h-4 w-4, h-5 w-5 for consistent scale
+- **Icon Placement**: Always place icons before text with proper spacing (`gap-2`)
+
+#### Loading States
+
+- Use the custom `LoadingSpinner` component for async operations
+- Disable interactive elements during loading states
+- Provide clear loading text alongside spinners
+
+#### Error Handling
+
+- Use Alert components with `variant="destructive"` for errors
+- Include appropriate icons (AlertCircle, XCircle) for visual clarity
+- Provide actionable error messages when possible
+
+#### Responsive Design
+
+- Use responsive Tailwind classes (`sm:`, `md:`, `lg:`)
+- Ensure components work well on mobile devices
+- Use appropriate spacing and sizing for different viewports
+
+### Styling Conventions
+
+#### Color Usage
+
+- **Primary Actions**: Use Button default variant or `bg-primary` classes
+- **Secondary Actions**: Use Button outline or secondary variants
+- **Destructive Actions**: Use `variant="destructive"` for delete/remove actions
+- **Status Indicators**: Use Badge components with appropriate variants
+
+#### Spacing
+
+- **Form Spacing**: Use `space-y-4` or `space-y-6` for form field containers
+- **Card Spacing**: Standard CardContent padding is handled automatically
+- **Layout Spacing**: Use consistent gap classes (`gap-2`, `gap-3`, `gap-4`)
+
+#### Component Customization
+
+- Extend components using className prop with Tailwind utilities
+- Use CSS variables for theme customization in `globals.css`
+- Maintain design consistency across all components
+
+### Adding New Components
+
+To add new shadcn/ui components:
+
+```bash
+npx shadcn@latest add [component-name]
+```
+
+**Installation Examples**:
+
+- `npx shadcn@latest add dropdown-menu`
+- `npx shadcn@latest add toast`
+- `npx shadcn@latest add checkbox`
+
+## React Hooks Usage Guidelines
+
+### useEffect Usage Policy
+
+**CRITICAL: Avoid useEffect unless absolutely necessary.** Most use cases can be handled with event handlers, component state, or React Query.
+
+#### When NOT to use useEffect (Most Common Cases)
+
+1. **Event Handling**: Use onChange, onClick, onSubmit handlers instead
+   ```typescript
+   // ❌ WRONG - Don't use useEffect for event responses
+   useEffect(() => {
+     if (selectedJobPostId) {
+       queryClient.invalidateQueries({ queryKey: ["resume-files"] });
+     }
+   }, [selectedJobPostId, queryClient]);
+
+   // ✅ CORRECT - Use event handlers
+   <Select 
+     onValueChange={(value) => {
+       field.onChange(value);
+       queryClient.invalidateQueries({ queryKey: ["resume-files"] });
+     }}
+   />
+   ```
+
+2. **Data Fetching**: Use TanStack Query (React Query) instead
+   ```typescript
+   // ❌ WRONG - Don't use useEffect for data fetching
+   useEffect(() => {
+     fetchData().then(setData);
+   }, []);
+
+   // ✅ CORRECT - Use React Query
+   const { data } = useQuery({
+     queryKey: ["data"],
+     queryFn: fetchData,
+   });
+   ```
+
+3. **Form State Updates**: Use form libraries like React Hook Form
+   ```typescript
+   // ❌ WRONG - Don't use useEffect for form state
+   useEffect(() => {
+     if (defaultValues) {
+       setFormData(defaultValues);
+     }
+   }, [defaultValues]);
+
+   // ✅ CORRECT - Use React Hook Form defaultValues
+   const form = useForm({
+     defaultValues: defaultValues,
+   });
+   ```
+
+#### When useEffect IS Appropriate (Rare Cases)
+
+1. **Cleanup operations** (timers, subscriptions, event listeners)
+2. **Direct DOM manipulation** that can't be handled declaratively
+3. **Integration with third-party libraries** that require imperative setup
+4. **Window/document event listeners** for global state
+
+#### Examples of Proper useEffect Usage
+
+```typescript
+// ✅ CORRECT - Cleanup timers
+useEffect(() => {
+  const timer = setInterval(() => {
+    // polling logic
+  }, 5000);
+  
+  return () => clearInterval(timer);
+}, []);
+
+// ✅ CORRECT - Third-party library integration
+useEffect(() => {
+  const chart = new Chart(canvasRef.current, config);
+  return () => chart.destroy();
+}, []);
+```
+
+### Alternative Patterns
+
+#### Event-Driven Updates
+Instead of useEffect, trigger actions in response to user events:
+
+```typescript
+// ✅ PREFERRED - Event handlers
+const handleJobPostChange = (jobPostId: string) => {
+  form.setValue('jobPostId', jobPostId);
+  queryClient.invalidateQueries({ queryKey: ["resumes"] });
+  resetForm();
+};
+```
+
+#### React Query for Server State
+Use React Query for all server state management:
+
+```typescript
+// ✅ PREFERRED - React Query with dependencies
+const { data: resumes } = useQuery({
+  queryKey: ["resumes", selectedJobPostId, selectedApplicantId],
+  queryFn: () => fetchResumes({ jobPostId: selectedJobPostId, applicantId: selectedApplicantId }),
+  enabled: !!selectedJobPostId && !!selectedApplicantId,
+});
+```
+
+#### Derived State
+Calculate derived state during render instead of useEffect:
+
+```typescript
+// ✅ PREFERRED - Computed during render
+const availableResumes = useMemo(() => 
+  resumeFiles.filter(resume => 
+    resume.applicantId === selectedApplicantId &&
+    resume.jobPostId === selectedJobPostId
+  ), [resumeFiles, selectedApplicantId, selectedJobPostId]
+);
+```
+
+### Enforcement Rules
+
+1. **Code Review**: Any useEffect must be justified in PR description
+2. **Alternatives First**: Always consider event handlers, React Query, or useMemo first
+3. **Cleanup Required**: All useEffect with side effects must include cleanup
+4. **Dependency Arrays**: Must be exhaustive and correct (use ESLint rules)
+
+Following these guidelines ensures predictable, maintainable, and performant React components.

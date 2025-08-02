@@ -1,6 +1,10 @@
 "use client";
 
 import type { EMPLOYMENT_TYPES, EXPERIENCE_LEVELS, JobPost } from "@/app/types";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { MapPin, Calendar, DollarSign } from "lucide-react";
 
 interface JobPostCardProps {
 	jobPost: JobPost;
@@ -56,106 +60,102 @@ export function JobPostCard({
 	};
 
 	return (
-		<div
-			className={`bg-background border rounded-lg p-6 shadow-sm transition-all ${
-				jobPost.isActive
-					? "border-border"
-					: "border-muted-foreground/30 opacity-75"
-			}`}
-		>
-			<div className="flex justify-between items-start mb-4">
-				<div className="flex-1">
-					<h3 className="text-lg font-semibold text-foreground mb-1">
-						{jobPost.title}
-					</h3>
-					{jobPost.department && (
-						<p className="text-sm text-muted-foreground">
-							{jobPost.department}
-						</p>
-					)}
-				</div>
-				<div className="flex items-center gap-2">
-					<span
-						className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-							jobPost.isActive
-								? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
-								: "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400"
-						}`}
-					>
-						{jobPost.isActive ? "Active" : "Inactive"}
-					</span>
-				</div>
-			</div>
-
-			<div className="space-y-2 mb-4">
-				{jobPost.location && (
-					<div className="flex items-center gap-2 text-sm text-muted-foreground">
-						<span>📍</span>
-						<span>{jobPost.location}</span>
+		<Card className={`transition-all hover:shadow-md ${
+			!jobPost.isActive ? "opacity-75" : ""
+		}`}>
+			<CardHeader>
+				<div className="flex justify-between items-start">
+					<div className="flex-1">
+						<CardTitle className="text-lg">
+							{jobPost.title}
+						</CardTitle>
+						{jobPost.department && (
+							<CardDescription>
+								{jobPost.department}
+							</CardDescription>
+						)}
 					</div>
-				)}
-
-				<div className="flex flex-wrap gap-2">
-					{getEmploymentTypeLabel(jobPost.employmentType) && (
-						<span className="inline-flex items-center px-2 py-1 rounded-md text-xs bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400">
-							{getEmploymentTypeLabel(jobPost.employmentType)}
-						</span>
-					)}
-					{getExperienceLevelLabel(jobPost.experienceLevel) && (
-						<span className="inline-flex items-center px-2 py-1 rounded-md text-xs bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400">
-							{getExperienceLevelLabel(jobPost.experienceLevel)}
-						</span>
-					)}
-				</div>
-
-				{jobPost.salaryRange && (
-					<div className="flex items-center gap-2 text-sm text-muted-foreground">
-						<span>💰</span>
-						<span>{jobPost.salaryRange}</span>
+					<div className="flex items-center gap-2">
+						<Badge variant={jobPost.isActive ? "default" : "secondary"}>
+							{jobPost.isActive ? "Active" : "Inactive"}
+						</Badge>
 					</div>
-				)}
-			</div>
-
-			<div className="mb-4">
-				<p className="text-sm text-muted-foreground line-clamp-3">
-					{jobPost.description.length > 150
-						? `${jobPost.description.substring(0, 150)}...`
-						: jobPost.description}
-				</p>
-			</div>
-
-			<div className="flex items-center justify-between pt-4 border-t border-border">
-				<span className="text-xs text-muted-foreground">
-					Created {formatDate(jobPost.createdAt)}
-				</span>
-
-				<div className="flex items-center gap-2">
-					<button
-						onClick={() => onToggleActive(!jobPost.isActive)}
-						className={`text-xs px-2 py-1 rounded transition-colors ${
-							jobPost.isActive
-								? "text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-900/20"
-								: "text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20"
-						}`}
-					>
-						{jobPost.isActive ? "Deactivate" : "Activate"}
-					</button>
-
-					<button
-						onClick={onEdit}
-						className="text-xs text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 px-2 py-1 rounded transition-colors"
-					>
-						Edit
-					</button>
-
-					<button
-						onClick={onDelete}
-						className="text-xs text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 px-2 py-1 rounded transition-colors"
-					>
-						Delete
-					</button>
 				</div>
-			</div>
-		</div>
+			</CardHeader>
+			<CardContent>
+				<div className="space-y-3 mb-4">
+					{jobPost.location && (
+						<div className="flex items-center gap-2 text-sm text-muted-foreground">
+							<MapPin className="h-4 w-4" />
+							<span>{jobPost.location}</span>
+						</div>
+					)}
+
+					<div className="flex flex-wrap gap-2">
+						{getEmploymentTypeLabel(jobPost.employmentType) && (
+							<Badge variant="secondary">
+								{getEmploymentTypeLabel(jobPost.employmentType)}
+							</Badge>
+						)}
+						{getExperienceLevelLabel(jobPost.experienceLevel) && (
+							<Badge variant="outline">
+								{getExperienceLevelLabel(jobPost.experienceLevel)}
+							</Badge>
+						)}
+					</div>
+
+					{jobPost.salaryRange && (
+						<div className="flex items-center gap-2 text-sm text-muted-foreground">
+							<DollarSign className="h-4 w-4" />
+							<span>{jobPost.salaryRange}</span>
+						</div>
+					)}
+				</div>
+
+				<div className="mb-4">
+					<p className="text-sm text-muted-foreground line-clamp-3">
+						{jobPost.description.length > 150
+							? `${jobPost.description.substring(0, 150)}...`
+							: jobPost.description}
+					</p>
+				</div>
+
+				<div className="flex items-center justify-between pt-4 border-t">
+					<div className="flex items-center gap-1 text-xs text-muted-foreground">
+						<Calendar className="h-3 w-3" />
+						<span>Created {formatDate(jobPost.createdAt)}</span>
+					</div>
+
+					<div className="flex items-center gap-2">
+						<Button
+							variant="ghost"
+							size="sm"
+							onClick={() => onToggleActive(!jobPost.isActive)}
+							className="h-8 px-2 text-xs"
+						>
+							{jobPost.isActive ? "Deactivate" : "Activate"}
+						</Button>
+
+						<Button
+							variant="ghost"
+							size="sm"
+							onClick={onEdit}
+							className="h-8 px-2 text-xs"
+						>
+							Edit
+						</Button>
+
+						<Button
+							variant="ghost"
+							size="sm"
+							onClick={onDelete}
+							className="h-8 px-2 text-xs text-destructive hover:text-destructive"
+						>
+							Delete
+						</Button>
+					</div>
+				</div>
+			</CardContent>
+		</Card>
 	);
 }

@@ -34,7 +34,10 @@ async function getJobPosts(request: AuthenticatedRequest) {
 
     console.error('Error fetching job posts:', error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { 
+        error: 'Internal server error',
+        details: [{ field: 'server', message: 'Failed to fetch job posts' }]
+      },
       { status: 500 }
     );
   }
@@ -67,7 +70,10 @@ async function createJobPost(request: AuthenticatedRequest) {
 
     console.error('Error creating job post:', error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { 
+        error: 'Internal server error',
+        details: [{ field: 'server', message: 'Failed to create job post' }]
+      },
       { status: 500 }
     );
   }

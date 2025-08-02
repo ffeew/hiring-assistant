@@ -4,6 +4,12 @@ import { jobPost } from '@/lib/db/schema';
 import { eq, desc } from 'drizzle-orm';
 import { randomUUID } from 'node:crypto';
 import { withNotDeleted, softDeleteData } from '@/lib/soft-delete';
+import { 
+  safeParseJSON,
+  requirementsSchema,
+  responsibilitiesSchema,
+  benefitsSchema
+} from '@/lib/json-utils';
 import type { GetJobPostsQuery, CreateJobPostBody, UpdateJobPostBody } from './job-posts.validator';
 
 export class JobPostsService {
@@ -27,9 +33,9 @@ export class JobPostsService {
     // Parse JSON fields
     return jobPosts.map(post => ({
       ...post,
-      requirements: post.requirements ? JSON.parse(post.requirements) : [],
-      responsibilities: post.responsibilities ? JSON.parse(post.responsibilities) : [],
-      benefits: post.benefits ? JSON.parse(post.benefits) : [],
+      requirements: safeParseJSON(post.requirements, requirementsSchema, []),
+      responsibilities: safeParseJSON(post.responsibilities, responsibilitiesSchema, []),
+      benefits: safeParseJSON(post.benefits, benefitsSchema, []),
     }));
   }
 
@@ -57,9 +63,9 @@ export class JobPostsService {
     // Parse JSON fields for response
     return {
       ...createdJobPost,
-      requirements: createdJobPost.requirements ? JSON.parse(createdJobPost.requirements) : [],
-      responsibilities: createdJobPost.responsibilities ? JSON.parse(createdJobPost.responsibilities) : [],
-      benefits: createdJobPost.benefits ? JSON.parse(createdJobPost.benefits) : [],
+      requirements: safeParseJSON(createdJobPost.requirements, requirementsSchema, []),
+      responsibilities: safeParseJSON(createdJobPost.responsibilities, responsibilitiesSchema, []),
+      benefits: safeParseJSON(createdJobPost.benefits, benefitsSchema, []),
     };
   }
 
@@ -83,9 +89,9 @@ export class JobPostsService {
     // Parse JSON fields
     return {
       ...jobPostRecord,
-      requirements: jobPostRecord.requirements ? JSON.parse(jobPostRecord.requirements) : [],
-      responsibilities: jobPostRecord.responsibilities ? JSON.parse(jobPostRecord.responsibilities) : [],
-      benefits: jobPostRecord.benefits ? JSON.parse(jobPostRecord.benefits) : [],
+      requirements: safeParseJSON(jobPostRecord.requirements, requirementsSchema, []),
+      responsibilities: safeParseJSON(jobPostRecord.responsibilities, responsibilitiesSchema, []),
+      benefits: safeParseJSON(jobPostRecord.benefits, benefitsSchema, []),
     };
   }
 
@@ -146,9 +152,9 @@ export class JobPostsService {
     // Parse JSON fields for response
     return {
       ...updatedJobPost,
-      requirements: updatedJobPost.requirements ? JSON.parse(updatedJobPost.requirements) : [],
-      responsibilities: updatedJobPost.responsibilities ? JSON.parse(updatedJobPost.responsibilities) : [],
-      benefits: updatedJobPost.benefits ? JSON.parse(updatedJobPost.benefits) : [],
+      requirements: safeParseJSON(updatedJobPost.requirements, requirementsSchema, []),
+      responsibilities: safeParseJSON(updatedJobPost.responsibilities, responsibilitiesSchema, []),
+      benefits: safeParseJSON(updatedJobPost.benefits, benefitsSchema, []),
     };
   }
 

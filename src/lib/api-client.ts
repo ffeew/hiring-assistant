@@ -8,7 +8,7 @@ import {
   type ProfileUpdateData,
   type ProfileResponseData
 } from '@/app/types';
-import { extractionResponseSchema } from '@/app/api/extract/resume-extraction.validator';
+import { extractionResponseSchema } from '@/app/api/extract/extract.validator';
 import { sendEmailsBodySchema, emailPreviewBodySchema } from '@/app/api/email/email.validator';
 import { createJobPostBodySchema, updateJobPostBodySchema } from '@/app/api/job-posts/job-posts.validator';
 import { updateProfileBodySchema } from '@/app/api/profile/profile.validator';
@@ -55,11 +55,14 @@ export interface ProfileResponse {
 // Type-safe API client functions
 export const apiClient = {
   // Resume extraction
-  async extractResumes(files: File[]): Promise<ExtractionResponseData[]> {
+  async extractResumes(files: File[], jobPostId: string): Promise<ExtractionResponseData[]> {
     const formData = new FormData();
     files.forEach((file) => {
       formData.append("files", file);
     });
+
+    // Add required job post ID
+    formData.append("jobPostId", jobPostId);
 
     const response = await fetch("/api/extract", {
       method: "POST",

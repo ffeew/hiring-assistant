@@ -4,6 +4,10 @@ import { applicant as applicantTable } from '@/lib/db/schema';
 import { eq, desc } from 'drizzle-orm';
 import { randomUUID } from 'node:crypto';
 import { withNotDeleted, softDeleteData } from '@/lib/soft-delete';
+import { 
+  safeParseJSONObject,
+  applicantMetadataSchema
+} from '@/lib/json-utils';
 import type { GetApplicantsQuery, CreateApplicantBody, UpdateApplicantBody } from './applicants.validator';
 import type { APPLICANT_STATUS } from '@/app/types';
 
@@ -32,7 +36,7 @@ export class ApplicantsService {
     // Parse metadata JSON strings
     return applicants.map(applicant => ({
       ...applicant,
-      metadata: applicant.metadata ? JSON.parse(applicant.metadata) : null,
+      metadata: safeParseJSONObject(applicant.metadata, applicantMetadataSchema),
     }));
   }
 
@@ -100,7 +104,7 @@ export class ApplicantsService {
     // Parse metadata for response
     return {
       ...newApplicant,
-      metadata: newApplicant.metadata ? JSON.parse(newApplicant.metadata) : null,
+      metadata: safeParseJSONObject(newApplicant.metadata, applicantMetadataSchema),
     };
   }
 
@@ -124,7 +128,7 @@ export class ApplicantsService {
     // Parse metadata JSON string
     return {
       ...applicant,
-      metadata: applicant.metadata ? JSON.parse(applicant.metadata) : null,
+      metadata: safeParseJSONObject(applicant.metadata, applicantMetadataSchema),
     };
   }
 
@@ -184,7 +188,7 @@ export class ApplicantsService {
     // Parse metadata for response
     return {
       ...updatedApplicant,
-      metadata: updatedApplicant.metadata ? JSON.parse(updatedApplicant.metadata) : null,
+      metadata: safeParseJSONObject(updatedApplicant.metadata, applicantMetadataSchema),
     };
   }
 
@@ -214,5 +218,22 @@ export class ApplicantsService {
         .set(softDeleteData())
         .where(eq(applicantTable.id, applicantId));
     });
+  }
+
+  static async updateApplicantBasicFields(
+    applicantId: string, 
+    updates: { firstName?: string; lastName?: string; email?: string; }
+  ) {
+    if (Object.keys(updates).length === 0) {
+      return;
+    }
+
+    await db
+      .update(applicantTable)
+      .set({
+        ...updates,
+        updatedAt: new Date(),
+      })
+      .where(eq(applicantTable.id, applicantId));
   }
 }

@@ -4,6 +4,13 @@ import { useState } from "react";
 import { LoadingSpinner } from "./loading-spinner";
 import type { ExtractedData } from "../types";
 import { EmailTemplate } from "../types";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { CheckCircle, XCircle, Mail, Eye, Send, AlertTriangle, FileText, Edit3 } from "lucide-react";
 
 type ResultsTableProps = {
 	extractedData: ExtractedData[];
@@ -76,242 +83,249 @@ export function ResultsTable({
 	}
 
 	return (
-		<div className="p-8 rounded-lg shadow-lg transition-all duration-500 animate-fade-in bg-card text-card-foreground border border-border">
-			<h2 className="text-2xl font-semibold mb-4 flex items-center text-foreground">
-				<span className="mr-2">✅</span>
-				2. Verify Details and Send Emails
-			</h2>
-			<div className="overflow-x-auto">
-				<table className="min-w-full divide-y transition-colors duration-300 border-border">
-					<thead className="bg-muted">
-						<tr>
-							<th
-								scope="col"
-								className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground"
-							>
-								File Name & Status
-							</th>
-							<th
-								scope="col"
-								className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground"
-							>
-								First Name ✏️
-							</th>
-							<th
-								scope="col"
-								className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground"
-							>
-								Last Name ✏️
-							</th>
-							<th
-								scope="col"
-								className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground"
-							>
-								Email ✏️
-							</th>
-							<th
-								scope="col"
-								className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground"
-							>
-								Email Template / Error Details
-							</th>
-						</tr>
-					</thead>
-					<tbody className="bg-card">
-						{extractedData.map((data, index) => (
-							<tr
-								key={index}
-								className={`transition-colors duration-200 hover:bg-opacity-50 border-b border-border ${
-									data.error ? "bg-red-50 dark:bg-red-900/20" : ""
-								}`}
-							>
-								<td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-foreground">
-									<div className="flex items-center">
-										{data.error ? (
-											<span
-												className="text-red-500 mr-2"
-												title="Failed to extract"
-											>
-												❌
+		<Card className="transition-all duration-500 animate-fade-in">
+			<CardHeader>
+				<CardTitle className="flex items-center gap-2">
+					<CheckCircle className="h-5 w-5 text-green-600" />
+					Verify Details and Send Emails
+				</CardTitle>
+				<CardDescription>
+					Review extracted candidate information and select email templates
+				</CardDescription>
+			</CardHeader>
+			<CardContent>
+				<div className="overflow-x-auto">
+					<Table>
+						<TableHeader>
+							<TableRow>
+								<TableHead className="w-[200px]">
+									<div className="flex items-center gap-2">
+										<FileText className="h-4 w-4" />
+										File & Status
+									</div>
+								</TableHead>
+								<TableHead>
+									<div className="flex items-center gap-2">
+										<Edit3 className="h-3 w-3" />
+										First Name
+									</div>
+								</TableHead>
+								<TableHead>
+									<div className="flex items-center gap-2">
+										<Edit3 className="h-3 w-3" />
+										Last Name
+									</div>
+								</TableHead>
+								<TableHead>
+									<div className="flex items-center gap-2">
+										<Edit3 className="h-3 w-3" />
+										Email
+									</div>
+								</TableHead>
+								<TableHead>Template / Error</TableHead>
+							</TableRow>
+						</TableHeader>
+						<TableBody>
+							{extractedData.map((data, index) => (
+								<TableRow
+									key={index}
+									className={`transition-colors ${
+										data.error ? "bg-destructive/5 hover:bg-destructive/10" : "hover:bg-muted/50"
+									}`}
+								>
+									<TableCell className="font-medium">
+										<div className="flex items-center gap-2">
+											{data.error ? (
+												<XCircle className="h-4 w-4 text-destructive" />
+											) : (
+												<CheckCircle className="h-4 w-4 text-green-600" />
+											)}
+											<span className="truncate max-w-[150px]" title={data.fileName}>
+												{data.fileName}
 											</span>
+										</div>
+									</TableCell>
+									<TableCell
+										className={`${
+											data.error ? "" : "cursor-pointer hover:bg-accent/50 rounded"
+										}`}
+										onClick={() =>
+											!data.error &&
+											handleCellClick(index, "firstName", data.firstName || "")
+										}
+										title={data.error ? "" : "Click to edit"}
+									>
+										{data.error ? (
+											<Badge variant="destructive" className="text-xs">
+												Error
+											</Badge>
+										) : editingCell?.row === index &&
+										  editingCell?.field === "firstName" ? (
+											<Input
+												type="text"
+												value={editValue}
+												onChange={(e) => setEditValue(e.target.value)}
+												onBlur={handleCellSave}
+												onKeyDown={handleKeyDown}
+												className="h-8 text-sm"
+												autoFocus
+											/>
 										) : (
-											<span
-												className="text-green-500 mr-2"
-												title="Successfully extracted"
-											>
-												✅
+											<span className="block w-full p-1 rounded transition-colors hover:bg-accent/30">
+												{data.firstName}
 											</span>
 										)}
-										{data.fileName}
-									</div>
-								</td>
-								<td
-									className={`px-6 py-4 whitespace-nowrap text-sm transition-colors text-muted-foreground ${
-										data.error ? "" : "cursor-pointer hover:bg-opacity-70"
-									}`}
-									onClick={() =>
-										!data.error &&
-										handleCellClick(index, "firstName", data.firstName)
-									}
-									title={data.error ? "" : "Click to edit"}
-								>
-									{data.error ? (
-										<span className="text-red-500 italic">
-											Error extracting
-										</span>
-									) : editingCell?.row === index &&
-									  editingCell?.field === "firstName" ? (
-										<input
-											type="text"
-											value={editValue}
-											onChange={(e) => setEditValue(e.target.value)}
-											onBlur={handleCellSave}
-											onKeyDown={handleKeyDown}
-											className="w-full px-2 py-1 rounded border text-sm bg-card text-foreground border-border"
-											autoFocus
-										/>
-									) : (
-										<span className="block w-full p-1 rounded hover:bg-opacity-50 bg-transparent">
-											{data.firstName}
-										</span>
-									)}
-								</td>
-								<td
-									className={`px-6 py-4 whitespace-nowrap text-sm transition-colors text-muted-foreground ${
-										data.error ? "" : "cursor-pointer hover:bg-opacity-70"
-									}`}
-									onClick={() =>
-										!data.error &&
-										handleCellClick(index, "lastName", data.lastName)
-									}
-									title={data.error ? "" : "Click to edit"}
-								>
-									{data.error ? (
-										<span className="text-red-500 italic">
-											Error extracting
-										</span>
-									) : editingCell?.row === index &&
-									  editingCell?.field === "lastName" ? (
-										<input
-											type="text"
-											value={editValue}
-											onChange={(e) => setEditValue(e.target.value)}
-											onBlur={handleCellSave}
-											onKeyDown={handleKeyDown}
-											className="w-full px-2 py-1 rounded border text-sm bg-card text-foreground border-border"
-											autoFocus
-										/>
-									) : (
-										<span className="block w-full p-1 rounded hover:bg-opacity-50 bg-transparent">
-											{data.lastName}
-										</span>
-									)}
-								</td>
-								<td
-									className={`px-6 py-4 whitespace-nowrap text-sm transition-colors text-muted-foreground ${
-										data.error ? "" : "cursor-pointer hover:bg-opacity-70"
-									}`}
-									onClick={() =>
-										!data.error && handleCellClick(index, "email", data.email)
-									}
-									title={data.error ? "" : "Click to edit"}
-								>
-									{data.error ? (
-										<span className="text-red-500 italic">
-											Error extracting
-										</span>
-									) : editingCell?.row === index &&
-									  editingCell?.field === "email" ? (
-										<input
-											type="email"
-											value={editValue}
-											onChange={(e) => setEditValue(e.target.value)}
-											onBlur={handleCellSave}
-											onKeyDown={handleKeyDown}
-											className="w-full px-2 py-1 rounded border text-sm bg-card text-foreground border-border"
-											autoFocus
-										/>
-									) : (
-										<span className="block w-full p-1 rounded hover:bg-opacity-50 bg-transparent">
-											{data.email}
-										</span>
-									)}
-								</td>
-								<td className="px-6 py-4 whitespace-nowrap text-sm">
-									{data.error ? (
-										<div className="text-red-500">
-											<span className="text-xs block">❌ Failed</span>
-											<span className="text-xs italic">{data.error}</span>
-										</div>
-									) : (
-										<select
-											value={data.template || EmailTemplate.ACKNOWLEDGMENT}
-											onChange={(e) =>
-												handleTemplateChange(
-													index,
-													e.target.value as EmailTemplate
-												)
-											}
-											className="w-full px-3 py-2 rounded border text-sm transition-colors duration-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-card text-foreground border-border"
-										>
-											<option value={EmailTemplate.ACKNOWLEDGMENT}>
-												📧 Acknowledgment
-											</option>
-											<option value={EmailTemplate.SCREENING}>
-												🔍 Screening Questions
-											</option>
-										</select>
-									)}
-								</td>
-							</tr>
-						))}
-					</tbody>
-				</table>
-			</div>
-			<div className="flex justify-between items-center mt-6">
-				<div className="text-sm px-3 py-2 rounded-md bg-muted text-muted-foreground">
-					<div className="flex items-center space-x-4">
-						<span>✅ {successfulExtractions.length} successful</span>
-						{failedExtractions.length > 0 && (
-							<span className="text-red-500">
-								❌ {failedExtractions.length} failed
-							</span>
-						)}
+									</TableCell>
+									<TableCell
+										className={`${
+											data.error ? "" : "cursor-pointer hover:bg-accent/50 rounded"
+										}`}
+										onClick={() =>
+											!data.error &&
+											handleCellClick(index, "lastName", data.lastName || "")
+										}
+										title={data.error ? "" : "Click to edit"}
+									>
+										{data.error ? (
+											<Badge variant="destructive" className="text-xs">
+												Error
+											</Badge>
+										) : editingCell?.row === index &&
+										  editingCell?.field === "lastName" ? (
+											<Input
+												type="text"
+												value={editValue}
+												onChange={(e) => setEditValue(e.target.value)}
+												onBlur={handleCellSave}
+												onKeyDown={handleKeyDown}
+												className="h-8 text-sm"
+												autoFocus
+											/>
+										) : (
+											<span className="block w-full p-1 rounded transition-colors hover:bg-accent/30">
+												{data.lastName}
+											</span>
+										)}
+									</TableCell>
+									<TableCell
+										className={`${
+											data.error ? "" : "cursor-pointer hover:bg-accent/50 rounded"
+										}`}
+										onClick={() =>
+											!data.error && handleCellClick(index, "email", data.email || "")
+										}
+										title={data.error ? "" : "Click to edit"}
+									>
+										{data.error ? (
+											<Badge variant="destructive" className="text-xs">
+												Error
+											</Badge>
+										) : editingCell?.row === index &&
+										  editingCell?.field === "email" ? (
+											<Input
+												type="email"
+												value={editValue}
+												onChange={(e) => setEditValue(e.target.value)}
+												onBlur={handleCellSave}
+												onKeyDown={handleKeyDown}
+												className="h-8 text-sm"
+												autoFocus
+											/>
+										) : (
+											<span className="block w-full p-1 rounded transition-colors hover:bg-accent/30">
+												{data.email}
+											</span>
+										)}
+									</TableCell>
+									<TableCell>
+										{data.error ? (
+											<div className="space-y-1">
+												<Badge variant="destructive" className="text-xs">
+													Failed
+												</Badge>
+												<p className="text-xs text-muted-foreground italic">
+													{data.error}
+												</p>
+											</div>
+										) : (
+											<Select
+												value={data.template || EmailTemplate.ACKNOWLEDGMENT}
+												onValueChange={(value) =>
+													handleTemplateChange(index, value as EmailTemplate)
+												}
+											>
+												<SelectTrigger className="h-8 text-sm">
+													<SelectValue />
+												</SelectTrigger>
+												<SelectContent>
+													<SelectItem value={EmailTemplate.ACKNOWLEDGMENT}>
+														<div className="flex items-center gap-2">
+															<Mail className="h-3 w-3" />
+															Acknowledgment
+														</div>
+													</SelectItem>
+													<SelectItem value={EmailTemplate.SCREENING}>
+														<div className="flex items-center gap-2">
+															<FileText className="h-3 w-3" />
+															Screening Questions
+														</div>
+													</SelectItem>
+												</SelectContent>
+											</Select>
+										)}
+									</TableCell>
+								</TableRow>
+							))}
+						</TableBody>
+					</Table>
+				</div>
+
+				<div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mt-6 pt-6 border-t">
+					<div className="space-y-2">
+						<div className="flex items-center gap-4">
+							<Badge variant="secondary" className="flex items-center gap-1">
+								<CheckCircle className="h-3 w-3" />
+								{successfulExtractions.length} successful
+							</Badge>
+							{failedExtractions.length > 0 && (
+								<Badge variant="destructive" className="flex items-center gap-1">
+									<XCircle className="h-3 w-3" />
+									{failedExtractions.length} failed
+								</Badge>
+							)}
+						</div>
+						<div className="flex items-center gap-1 text-xs text-muted-foreground">
+							<AlertTriangle className="h-3 w-3" />
+							<span>Click on fields to edit • Select email template for each candidate</span>
+							{failedExtractions.length > 0 && <span> • Failed files cannot be edited</span>}
+						</div>
 					</div>
-					<div className="text-xs mt-1 opacity-75">
-						💡 Click on fields to edit • Select email template for each
-						candidate
-						{failedExtractions.length > 0 && " • Failed files cannot be edited"}
+
+					<div className="flex gap-3">
+						<Button
+							variant="outline"
+							onClick={onPreviewEmails}
+							disabled={isPreviewingEmails || successfulExtractions.length === 0}
+							className="flex items-center gap-2"
+						>
+							<Eye className="h-4 w-4" />
+							Preview Emails
+						</Button>
+						<Button
+							onClick={onSendEmails}
+							disabled={isSendingEmails || successfulExtractions.length === 0}
+							className="flex items-center gap-2"
+						>
+							{isSendingEmails ? (
+								<LoadingSpinner />
+							) : (
+								<Send className="h-4 w-4" />
+							)}
+							{isSendingEmails ? "Sending..." : "Send All Emails"}
+						</Button>
 					</div>
 				</div>
-				<div className="flex space-x-3">
-					<button
-						onClick={onPreviewEmails}
-						disabled={isPreviewingEmails || successfulExtractions.length === 0}
-						className={`px-6 py-2 font-semibold rounded-full transition-all duration-300 flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed border border-border ${
-							isPreviewingEmails || successfulExtractions.length === 0
-								? "bg-muted text-muted-foreground"
-								: "bg-muted text-foreground hover:bg-muted/80"
-						}`}
-					>
-						<span>👁️</span>
-						<span>Preview Emails</span>
-					</button>
-					<button
-						onClick={onSendEmails}
-						disabled={isSendingEmails || successfulExtractions.length === 0}
-						className={`px-6 py-2 font-semibold rounded-full transition-all duration-300 flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed ${
-							isSendingEmails || successfulExtractions.length === 0
-								? "bg-muted text-muted-foreground"
-								: "bg-secondary text-white hover:bg-secondary-hover"
-						}`}
-					>
-						{isSendingEmails && <LoadingSpinner size="w-4 h-4" />}
-						<span>📧</span>
-						<span>{isSendingEmails ? "Sending..." : "Send Emails to All"}</span>
-					</button>
-				</div>
-			</div>
-		</div>
+			</CardContent>
+		</Card>
 	);
 }

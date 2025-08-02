@@ -4,17 +4,8 @@ import { z } from 'zod';
 // CORE TYPES & ENUMS
 // ============================================================================
 
-export type ExtractedData = {
-  fileName: string;
-  firstName: string;
-  lastName: string;
-  email: string;
-  template?: EmailTemplate;
-  jobPosition?: string;
-  resumeId?: string; // ID of the resume record in database
-  applicantId?: string; // ID of the applicant record in database
-  error?: string; // For failed extractions
-};
+// ExtractedData is now an alias for ExtractionResponseData for backward compatibility
+export type { ExtractionResponseData as ExtractedData } from '@/app/api/extract/extract.validator';
 
 export enum EmailTemplate {
   ACKNOWLEDGMENT = 'acknowledgment',
@@ -42,7 +33,7 @@ export type { CreateApplicantBody as CreateApplicantData, UpdateApplicantBody as
 export type { CreateJobPostBody as CreateJobPostData, UpdateJobPostBody as UpdateJobPostData } from '@/app/api/job-posts/job-posts.validator';
 export type { UpdateProfileBody as ProfileUpdateData } from '@/app/api/profile/profile.validator';
 export type { SendEmailsBody as EmailRequestData, EmailPreviewBody as EmailPreviewRequestData } from '@/app/api/email/email.validator';
-export type { MistralExtractionData, ResumeExtractionData, ExtractionResponseData } from '@/app/api/extract/resume-extraction.validator';
+export type { MistralExtractionData, ResumeExtractionData, ExtractionResponseData, SuccessfulExtractionData } from '@/app/api/extract/extract.validator';
 
 // Profile response schema (not used in validation, only for API responses)
 export const profileResponseSchema = z.object({

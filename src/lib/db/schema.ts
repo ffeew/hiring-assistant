@@ -131,6 +131,8 @@ export const resumeFile = sqliteTable("resume_file", {
   applicantId: text("applicant_id")
     .notNull()
     .references(() => applicant.id, { onDelete: "cascade" }),
+  jobPostId: text("job_post_id")
+    .references(() => jobPost.id, { onDelete: "set null" }),
   fileName: text("file_name").notNull(),
   filePath: text("file_path").notNull(), // Path to the file in Cloudflare R2
   fileSize: integer("file_size"), // File size in bytes

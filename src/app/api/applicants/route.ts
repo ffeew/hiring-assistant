@@ -35,7 +35,10 @@ async function getApplicants(request: AuthenticatedRequest) {
 
     console.error('Error fetching applicants:', error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { 
+        error: 'Internal server error',
+        details: [{ field: 'server', message: 'Failed to fetch applicants' }]
+      },
       { status: 500 }
     );
   }
@@ -69,14 +72,20 @@ async function createApplicant(request: AuthenticatedRequest) {
     // Handle business logic errors
     if (error instanceof Error && error.message.includes('An applicant with this email already exists')) {
       return NextResponse.json(
-        { error: error.message },
+        { 
+          error: 'Business logic error',
+          details: [{ field: 'email', message: error.message }]
+        },
         { status: 400 }
       );
     }
 
     console.error('Error creating applicant:', error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { 
+        error: 'Internal server error',
+        details: [{ field: 'server', message: 'Failed to create applicant' }]
+      },
       { status: 500 }
     );
   }
