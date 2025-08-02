@@ -152,10 +152,21 @@ async function createExample(request: AuthenticatedRequest) {
 **Data Fetching Architecture**
 
 - TanStack Query (`@tanstack/react-query`) for server state management
-- Custom hooks in `src/app/hooks/use-job-posts.ts` for job posts CRUD operations
+- Centralized query provider in `src/app/providers/query-provider.tsx` with global configuration
 - Query caching with 1-minute stale time and smart invalidation strategies
 - Optimistic updates and automatic error handling with rollback
 - Background refetching and request deduplication
+
+**Query Hook Organization**
+
+- **Global Hooks**: `src/app/hooks/` for app-wide data fetching (job posts, hiring workflow)
+- **Feature-Specific Queries**: Organize in `query/` subdirectories within feature folders
+- **Example Structure**: `src/app/interview-assistant/query/` contains:
+  - `use-applicants.ts` - Applicant data fetching
+  - `use-job-posts.ts` - Job post data fetching  
+  - `use-resume-files.ts` - Resume file data with invalidation utilities
+- **Pattern**: Each hook exports a single `useQuery` hook with typed interfaces
+- **Invalidation**: Separate utility functions for query invalidation (e.g., `invalidateResumeFiles()`)
 
 **State Management & UI Flow**
 
@@ -297,6 +308,72 @@ const metadata = safeParseJSONObject(applicant.metadata, applicantMetadataSchema
 - `ExtractedData` is now an alias for `ExtractionResponseData` from extract validator
 - All API response types follow consistent patterns with optional fields
 - JSON field types validated with Zod schemas on parse operations
+
+### Query Development Rules (ENFORCED STANDARDS)
+
+**File Organization:**
+1. **Global Queries**: Place in `src/app/hooks/` for app-wide data (job posts, hiring workflow)
+2. **Feature Queries**: Create `query/` subdirectories within feature folders (e.g., `src/app/interview-assistant/query/`)
+3. **Naming Convention**: Use descriptive names like `use-applicants.ts`, `use-resume-files.ts`
+
+**Hook Structure (MANDATORY PATTERN):**
+```typescript
+// Each query file must follow this pattern
+"use client";
+
+import { useQuery } from "@tanstack/react-query";
+
+interface DataType {
+  id: string;
+  // ... other fields
+}
+
+async function fetchData(): Promise<DataType[]> {
+  const response = await fetch("/api/endpoint");
+  if (!response.ok) throw new Error("Failed to fetch data");
+  const result = await response.json();
+  return result.data;
+}
+
+export function useDataName() {
+  return useQuery({
+    queryKey: ["data-name"],
+    queryFn: fetchData,
+    staleTime: 0, // Customize as needed
+  });
+}
+```
+
+**Query Invalidation (MANDATORY PATTERN):**
+```typescript
+// Separate invalidation utilities
+import { queryClient } from "@/app/providers/query-provider";
+
+export function invalidateDataName() {
+  return queryClient.invalidateQueries({ queryKey: ["data-name"] });
+}
+```
+
+**Usage in Components:**
+```typescript
+// Import individual hooks
+import { useApplicants } from "./query/use-applicants";
+import { invalidateResumeFiles } from "./query/use-resume-files";
+
+// Use in event handlers, not useEffect
+<Select 
+  onValueChange={(value) => {
+    field.onChange(value);
+    invalidateResumeFiles(); // Trigger refetch
+  }}
+/>
+```
+
+**Query Configuration Rules:**
+- Use `staleTime: 0` for frequently changing data (resumes, real-time updates)
+- Use `staleTime: 60 * 1000` (1 minute) for relatively stable data (job posts, applicants)
+- Always handle loading and error states in components
+- Use typed interfaces for all API responses
 
 ### Technology Stack
 
