@@ -4,8 +4,8 @@ import { env } from '@/lib/env';
 import { ResponseFormat } from '@mistralai/mistralai/models/components/responseformat';
 import { randomUUID } from 'node:crypto';
 import { SUPPORTED_FILE_TYPES } from '@/app/types';
-import { 
-  mistralExtractionSchema, 
+import {
+  mistralExtractionSchema,
   resumeExtractionSchema,
   type ResumeExtractionData,
   type ExtractionResponseData
@@ -16,6 +16,8 @@ import { eq } from 'drizzle-orm';
 import { calculateFileHash } from '@/lib/hash';
 import { withNotDeleted } from '@/lib/soft-delete';
 import { r2Service } from "@/lib/r2";
+import { groq } from '@ai-sdk/groq';
+import { generateObject } from 'ai';
 
 const client = new Mistral({ apiKey: env.MISTRAL_API_KEY });
 
@@ -28,8 +30,8 @@ export class ExtractService {
    * Main method to process resume files
    */
   static async processResumes(
-    userId: string, 
-    files: File[], 
+    userId: string,
+    files: File[],
     jobPostId: string
   ): Promise<ExtractionResponseData[]> {
     const extractedData = await Promise.allSettled(
@@ -57,9 +59,9 @@ export class ExtractService {
           };
         }
 
-        // Extract resume data using Mistral OCR
-        const { extractedText, structuredResumeData } = await this.extractResumeData(
-          fileBuffer, 
+        // Extract resume data using optimized OCR + LLM flow
+        const { extractedText, structuredResumeData } = await this.extractResumeDataFast(
+          fileBuffer,
           file.type as typeof SUPPORTED_FILE_TYPES[number]
         );
 
@@ -116,7 +118,7 @@ export class ExtractService {
    * Extract data from resume using Mistral OCR
    */
   static async extractResumeData(
-    fileBuffer: Buffer, 
+    fileBuffer: Buffer,
     fileType: typeof SUPPORTED_FILE_TYPES[number]
   ): Promise<{ extractedText: string; structuredResumeData: ResumeExtractionData; }> {
     if (!SUPPORTED_FILE_TYPES.includes(fileType)) {
@@ -142,21 +144,92 @@ export class ExtractService {
       // Then validate with full schema (this will validate email/URL formats)
       // If validation fails, we'll still return the Mistral data but log the validation errors
       try {
-        return { 
-          extractedText: response.pages.map(page => page.markdown).join("\n---\n"), 
-          structuredResumeData: resumeExtractionSchema.parse(mistralValidatedData) 
+        return {
+          extractedText: response.pages.map(page => page.markdown).join("\n---\n"),
+          structuredResumeData: resumeExtractionSchema.parse(mistralValidatedData)
         };
       } catch (validationError) {
         console.warn("Resume data failed full validation, but will proceed with basic validation:", validationError);
         // Return the Mistral-validated data as ResumeExtractionData
-        return { 
-          extractedText: response.pages.map(page => page.markdown).join("\n---\n"), 
-          structuredResumeData: mistralValidatedData as ResumeExtractionData 
+        return {
+          extractedText: response.pages.map(page => page.markdown).join("\n---\n"),
+          structuredResumeData: mistralValidatedData as ResumeExtractionData
         };
       }
     } catch (error) {
       console.error("Error extracting resume data:", error);
       throw error;
+    }
+  }
+
+  /**
+   * Fast extract data from resume using Mistral OCR + Groq field extraction
+   */
+  static async extractResumeDataFast(
+    fileBuffer: Buffer,
+    fileType: typeof SUPPORTED_FILE_TYPES[number]
+  ): Promise<{ extractedText: string; structuredResumeData: ResumeExtractionData; }> {
+    if (!SUPPORTED_FILE_TYPES.includes(fileType)) {
+      throw new Error(`Unsupported file type: ${fileType}`);
+    }
+
+    try {
+      // Step 1: Extract markdown text using Mistral OCR (fast, no annotation)
+      const ocrResponse = await this.extractTextFromFile(fileBuffer, fileType);
+      const extractedText = ocrResponse.pages.map(page => page.markdown).join("\n---\n");
+
+      // Step 2: Extract structured data using Groq LLM
+      const structuredResumeData = await this.extractFieldsFromText(extractedText);
+
+      return {
+        extractedText,
+        structuredResumeData
+      };
+    } catch (error) {
+      console.error("Error extracting resume data with fast method:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Extract structured fields from resume text using Groq LLM
+   */
+  static async extractFieldsFromText(resumeText: string): Promise<ResumeExtractionData> {
+    const prompt = `You are an expert resume parser. Extract the following information from the resume text provided below. Return accurate, properly formatted data.
+
+RESUME TEXT:
+${resumeText}
+
+EXTRACT:
+- firstName: First name of the candidate
+- lastName: Last name of the candidate  
+- email: Email address (must be valid email format)
+- phone: Phone number (optional)
+- linkedinUrl: LinkedIn profile URL (optional, must be valid URL if present)
+- githubUrl: GitHub profile URL (optional, must be valid URL if present)
+- portfolioUrl: Portfolio/personal website URL (optional, must be valid URL if present)
+- skills: Array of technical and soft skills mentioned
+- experience: Array of work experience with company, position, duration, description
+- education: Array of education with institution, degree, fieldOfStudy, graduationYear
+
+IMPORTANT:
+- Extract information exactly as written in the resume
+- For URLs, only include if they are valid and complete
+- For email, ensure it follows proper email format
+- If information is not found, omit the optional fields
+- Be thorough in extracting skills, experience, and education details`;
+
+    try {
+      const result = await generateObject({
+        model: groq("moonshotai/kimi-k2-instruct"),
+        prompt,
+        schema: resumeExtractionSchema,
+      });
+
+      return result.object;
+    } catch (error) {
+      console.error("Error extracting fields with Groq:", error);
+      throw new Error("Failed to extract structured data from resume text");
     }
   }
 
@@ -312,14 +385,14 @@ export class ExtractService {
   // PRIVATE HELPER METHODS
   // ============================================================================
 
-  private static async extractInformationFromFile({ 
-    fileBuffer, 
-    fileType, 
-    annotationFormat 
-  }: { 
-    fileBuffer: Buffer, 
-    fileType: typeof SUPPORTED_FILE_TYPES[number]; 
-    annotationFormat: ResponseFormat; 
+  private static async extractInformationFromFile({
+    fileBuffer,
+    fileType,
+    annotationFormat
+  }: {
+    fileBuffer: Buffer,
+    fileType: typeof SUPPORTED_FILE_TYPES[number];
+    annotationFormat: ResponseFormat;
   }) {
     switch (fileType) {
       case 'application/pdf':
@@ -327,6 +400,21 @@ export class ExtractService {
       case 'application/msword':
       case 'application/vnd.openxmlformats-officedocument.wordprocessingml.document':
         return this.extractInformationFromDocx(fileBuffer, annotationFormat);
+      default:
+        throw new Error(`Unsupported file type: ${fileType}`);
+    }
+  }
+
+  private static async extractTextFromFile(
+    fileBuffer: Buffer,
+    fileType: typeof SUPPORTED_FILE_TYPES[number]
+  ) {
+    switch (fileType) {
+      case 'application/pdf':
+        return this.extractTextFromPdf(fileBuffer);
+      case 'application/msword':
+      case 'application/vnd.openxmlformats-officedocument.wordprocessingml.document':
+        return this.extractTextFromDocx(fileBuffer);
       default:
         throw new Error(`Unsupported file type: ${fileType}`);
     }
@@ -372,6 +460,58 @@ export class ExtractService {
         },
         documentAnnotationFormat: annotationFormat,
         includeImageBase64: true
+      });
+
+      // delete the uploaded file after processing
+      await client.files.delete({
+        fileId: uploadedDocx.id,
+      });
+
+      return ocrResponse;
+    } catch (error) {
+      console.error("Error uploading or processing DOCX file:", error);
+      throw error;
+    }
+  }
+
+  private static async extractTextFromPdf(fileBuffer: Buffer) {
+    try {
+      const base64File = fileBuffer.toString('base64');
+
+      return await client.ocr.process({
+        model: "mistral-ocr-latest",
+        document: {
+          type: "document_url",
+          documentUrl: "data:application/pdf;base64," + base64File,
+        },
+        includeImageBase64: false,
+      });
+    } catch (error) {
+      console.error("Error processing PDF file:", error);
+      throw error;
+    }
+  }
+
+  private static async extractTextFromDocx(fileBuffer: Buffer) {
+    try {
+      const uploadedDocx = await client.files.upload({
+        file: {
+          fileName: `${randomUUID()}.docx`,
+          content: fileBuffer,
+        },
+        purpose: "ocr"
+      });
+      const signedUrl = await client.files.getSignedUrl({
+        fileId: uploadedDocx.id,
+      });
+
+      const ocrResponse = await client.ocr.process({
+        model: "mistral-ocr-latest",
+        document: {
+          type: "document_url",
+          documentUrl: signedUrl.url,
+        },
+        includeImageBase64: false
       });
 
       // delete the uploaded file after processing
