@@ -1,10 +1,11 @@
 "use client";
 
+import { useState } from "react";
 import type { EMPLOYMENT_TYPES, EXPERIENCE_LEVELS, JobPost } from "@/app/types";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { MapPin, Calendar, DollarSign } from "lucide-react";
+import { MapPin, Calendar, DollarSign, ChevronDown, ChevronUp } from "lucide-react";
 
 interface JobPostCardProps {
 	jobPost: JobPost;
@@ -19,6 +20,10 @@ export function JobPostCard({
 	onDelete,
 	onToggleActive,
 }: JobPostCardProps) {
+	const [isExpanded, setIsExpanded] = useState(false);
+	const DESCRIPTION_LIMIT = 150;
+	const shouldShowToggle = jobPost.description.length > DESCRIPTION_LIMIT;
+
 	const formatDate = (date: Date) => {
 		return new Date(date).toLocaleDateString("en-US", {
 			year: "numeric",
@@ -113,25 +118,43 @@ export function JobPostCard({
 				</div>
 
 				<div className="mb-4">
-					<p className="text-sm text-muted-foreground line-clamp-3">
-						{jobPost.description.length > 150
-							? `${jobPost.description.substring(0, 150)}...`
-							: jobPost.description}
+					<p className="text-sm text-muted-foreground">
+						{isExpanded || !shouldShowToggle
+							? jobPost.description
+							: `${jobPost.description.substring(0, DESCRIPTION_LIMIT)}...`}
 					</p>
+					{shouldShowToggle && (
+						<button
+							onClick={() => setIsExpanded(!isExpanded)}
+							className="text-xs text-primary hover:text-primary/80 transition-colors mt-2 flex items-center gap-1"
+						>
+							{isExpanded ? (
+								<>
+									<span>Show less</span>
+									<ChevronUp className="h-3 w-3" />
+								</>
+							) : (
+								<>
+									<span>See more</span>
+									<ChevronDown className="h-3 w-3" />
+								</>
+							)}
+						</button>
+					)}
 				</div>
 
-				<div className="flex items-center justify-between pt-4 border-t">
+				<div className="pt-4 border-t space-y-3">
 					<div className="flex items-center gap-1 text-xs text-muted-foreground">
 						<Calendar className="h-3 w-3" />
 						<span>Created {formatDate(jobPost.createdAt)}</span>
 					</div>
 
-					<div className="flex items-center gap-2">
+					<div className="flex flex-wrap items-center gap-2">
 						<Button
 							variant="ghost"
 							size="sm"
 							onClick={() => onToggleActive(!jobPost.isActive)}
-							className="h-8 px-2 text-xs"
+							className="h-8 px-2 text-xs flex-shrink-0"
 						>
 							{jobPost.isActive ? "Deactivate" : "Activate"}
 						</Button>
@@ -140,7 +163,7 @@ export function JobPostCard({
 							variant="ghost"
 							size="sm"
 							onClick={onEdit}
-							className="h-8 px-2 text-xs"
+							className="h-8 px-2 text-xs flex-shrink-0"
 						>
 							Edit
 						</Button>
@@ -149,7 +172,7 @@ export function JobPostCard({
 							variant="ghost"
 							size="sm"
 							onClick={onDelete}
-							className="h-8 px-2 text-xs text-destructive hover:text-destructive"
+							className="h-8 px-2 text-xs text-destructive hover:text-destructive flex-shrink-0"
 						>
 							Delete
 						</Button>

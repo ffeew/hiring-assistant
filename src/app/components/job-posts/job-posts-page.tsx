@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { Header } from "../header";
 import { JobPostCard } from "./job-post-card";
 import { JobPostForm } from "./job-post-form";
 import { LoadingSpinner } from "../loading-spinner";
@@ -87,11 +86,8 @@ export function JobPostsPage() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col items-center p-6 md:p-24">
-      <div className="w-full max-w-6xl">
-        <Header />
-        
-        <div className="mb-8">
+    <div className="flex flex-col gap-6">
+      <div className="mb-8">
           <div className="flex justify-between items-center mb-6">
             <div>
               <h1 className="text-3xl font-bold text-foreground">Job Posts</h1>
@@ -135,12 +131,11 @@ export function JobPostsPage() {
             </div>
           )}
         </div>
-      </div>
 
       {(showCreateForm || editingPost) && (
         <JobPostForm
           jobPost={editingPost}
-          onSave={editingPost 
+          onSave={editingPost && editingPost.id
             ? (data) => handleUpdateJobPost(editingPost.id, data)
             : handleCreateJobPost
           }
