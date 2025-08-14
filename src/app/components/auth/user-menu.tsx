@@ -46,7 +46,7 @@ export function UserMenu({ user: initialUser }: UserMenuProps) {
 				)}
 				<span className="hidden sm:block text-foreground">{user.name}</span>
 				<svg
-					className="w-4 h-4 text-muted-foreground"
+					className="w-4 h-4 text-foreground/70 group-hover:text-foreground transition-colors"
 					fill="none"
 					stroke="currentColor"
 					viewBox="0 0 24 24"
