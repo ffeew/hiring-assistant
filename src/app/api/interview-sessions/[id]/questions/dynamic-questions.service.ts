@@ -163,7 +163,7 @@ IMPORTANT:
 
     try {
       const result = await generateObject({
-        model: groq("meta-llama/llama-4-maverick-17b-128e-instruct"),
+        model: groq("openai/gpt-oss-120b"),
         prompt,
         schema: dynamicQuestionsSchema,
       });
