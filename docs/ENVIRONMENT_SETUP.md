@@ -1,45 +1,103 @@
 # Environment Variables Setup Guide
 
-This guide explains how to properly configure your environment variables for the hiring assistant application.
+This comprehensive guide explains how to properly configure your environment variables for the hiring assistant application, including all required services and setup steps.
 
 ## 🔧 Quick Setup
 
-The application now uses a **database-first configuration** approach where user-specific settings (email, company details) are stored per-user in the database rather than environment variables.
+The application uses a **hybrid configuration** approach:
+- **Infrastructure variables** (APIs, database, storage) are set via environment variables
+- **User-specific settings** (email, company details) are stored per-user in the database for multi-user support
 
 ## 📋 Required Environment Variables
 
-### 1. **Mistral AI API Key**
+### 1. **AI Service Configuration**
 
+#### Mistral AI (Resume Processing)
 ```bash
 MISTRAL_API_KEY=your-mistral-api-key-here
 ```
 
-- **Purpose**: Used for AI-powered resume extraction
-- **How to get**: Sign up at [Mistral AI](https://mistral.ai/) and get your API key
-- **Required**: ✅ Yes - needed for resume processing
+- **Purpose**: AI-powered resume extraction and data parsing
+- **How to get**: 
+  1. Sign up at [Mistral AI](https://mistral.ai/)
+  2. Navigate to API Keys section
+  3. Create a new API key
+- **Required**: ✅ Yes - Essential for resume processing
+- **Cost**: Pay-per-use model, typically $0.50-$2.00 per 100 resumes
 
-### 2. **Better Auth Configuration**
+#### Groq AI (Interview Assistant)
+```bash
+GROQ_API_KEY=your-groq-api-key-here
+```
+
+- **Purpose**: Fast AI inference for interview question generation and conversation analysis
+- **How to get**:
+  1. Sign up at [Groq Console](https://console.groq.com/)
+  2. Create an API key in your dashboard
+- **Required**: ✅ Yes - Needed for interview features
+- **Cost**: Free tier available, very cost-effective for interview use
+
+### 2. **Authentication & Security Configuration**
 
 ```bash
 BETTER_AUTH_SECRET=your-32-character-secret-key-here
 NEXT_PUBLIC_BETTER_AUTH_URL=http://localhost:3000
 ```
 
-- **Purpose**: Authentication system and encryption key for sensitive data
-- **Secret**: Must be at least 32 characters long (used for auth + encrypting Gmail passwords)
-- **URL**: Your application's base URL (must be `NEXT_PUBLIC_` prefixed for client access)
-- **Required**: ✅ Yes - needed for authentication and security
+- **Purpose**: 
+  - User authentication and session management
+  - Encryption key for sensitive data (Gmail passwords, tokens)
+  - CSRF protection and security features
+- **Secret Requirements**: 
+  - Must be at least 32 characters long
+  - Use a cryptographically secure random string
+  - **Generate with**: `openssl rand -base64 32`
+- **URL Configuration**:
+  - Development: `http://localhost:3000`
+  - Production: Your deployed application URL
+  - Must be `NEXT_PUBLIC_` prefixed for client-side access
+- **Required**: ✅ Yes - Critical for security and user management
 
-### 3. **Database Configuration (Turso)**
+### 3. **Database Configuration (Turso/LibSQL)**
 
 ```bash
 TURSO_DATABASE_URL=libsql://your-database.turso.io
 TURSO_AUTH_TOKEN=your-turso-auth-token
 ```
 
-- **Purpose**: Database connection for storing application data and user configurations
-- **How to get**: Create a database at [Turso](https://turso.tech/)
-- **Required**: ✅ Yes - needed for data storage
+- **Purpose**: Serverless SQLite database for all application data
+- **How to setup**:
+  1. Sign up at [Turso](https://turso.tech/) (free tier available)
+  2. Create a new database: `turso db create hiring-assistant`
+  3. Get connection URL: `turso db show hiring-assistant --url`
+  4. Create auth token: `turso db tokens create hiring-assistant`
+- **Required**: ✅ Yes - Essential for data persistence
+- **Features**: Automatic backups, global replication, serverless scaling
+- **Cost**: Free tier includes 1GB storage + 1 billion row reads
+
+### 4. **File Storage Configuration (Cloudflare R2)**
+
+```bash
+S3_API_URL=https://your-account-id.r2.cloudflarestorage.com
+R2_ACCESS_KEY_ID=your-r2-access-key-id
+R2_SECRET_ACCESS_KEY=your-r2-secret-access-key
+R2_BUCKET_NAME=your-bucket-name
+```
+
+- **Purpose**: Secure storage for resume files with CDN delivery
+- **How to setup**:
+  1. Sign up for [Cloudflare](https://dash.cloudflare.com/)
+  2. Navigate to R2 Object Storage
+  3. Create a new bucket (e.g., `hiring-assistant-resumes`)
+  4. Go to Manage R2 API tokens
+  5. Create R2 token with Object Read & Write permissions
+  6. Note your Account ID from the R2 overview page
+- **Required**: ✅ Yes - Needed for resume file storage
+- **Benefits**: 
+  - Zero egress fees (unlike AWS S3)
+  - Global CDN for fast file access
+  - Compatible with S3 APIs
+- **Cost**: $0.015/GB stored + $4.50/million requests
 
 ## 👤 User-Specific Configuration
 
@@ -77,93 +135,285 @@ Users can create and manage job advertisements through the application:
 5. Copy the 16-character password (format: `abcd efgh ijkl mnop`)
 6. Enter this password in your Profile Settings (it will be encrypted automatically)
 
-## 🧪 Testing Your Configuration
+## 🚀 Setup Instructions
 
-### 1. Test Environment Setup
+### Step 1: Clone and Install
 
 ```bash
-# Build the application to validate environment variables
+# Clone the repository
+git clone <your-repo-url>
+cd hiring-assistant
+
+# Install dependencies
+npm install
+```
+
+### Step 2: Environment Configuration
+
+```bash
+# Copy the example environment file
+cp .env.example .env
+
+# Edit the .env file with your actual values
+nano .env  # or use your preferred editor
+```
+
+### Step 3: Database Setup
+
+```bash
+# Generate database migrations
+npx drizzle-kit generate
+
+# Run database migrations
+npx drizzle-kit migrate
+```
+
+### Step 4: Verify Configuration
+
+```bash
+# Validate environment variables and build
 npm run build
 
-# Start the development server
+# Start development server
 npm run dev
 ```
 
-### 2. Test User Registration
+### Step 5: Complete User Setup
 
-1. Navigate to `/signup` and create an account
-2. Fill in all profile information including Gmail settings
-3. Your Gmail password will be automatically encrypted
+1. Navigate to `http://localhost:3000`
+2. Create an account via `/signup`
+3. Configure your profile settings (Gmail, company details)
+4. Create your first job post
+5. Test the resume upload workflow
 
-### 3. Test Email Configuration
+## 🧪 Testing Your Configuration
 
-1. Upload resume files to test the extraction pipeline
-2. Use the email preview feature to test your templates
-3. Send test emails to verify your Gmail configuration
+### 1. Environment Validation Test
 
-### 4. Test Job Posts Management
+```bash
+# Check if all environment variables are correctly set
+npm run build
+```
 
-1. Navigate to `/job-posts` to create job advertisements
-2. Test the job position selection in the main workflow
-3. Verify email templates use the correct job information
+If successful, you'll see a clean build. If not, you'll get specific error messages about missing variables.
+
+### 2. Database Connection Test
+
+```bash
+# Open Drizzle Studio to inspect your database
+npx drizzle-kit studio
+```
+
+This will open a web interface at `http://localhost:4983` to view your database tables.
+
+### 3. File Storage Test
+
+Upload a test resume through the application. Check your R2 bucket to confirm files are being stored correctly.
+
+### 4. AI Services Test
+
+1. **Mistral AI Test**: Upload a resume and verify data extraction works
+2. **Groq AI Test**: Use the interview assistant to generate questions
+
+### 5. Email System Test
+
+1. Configure your Gmail settings in profile
+2. Upload resumes and use email preview
+3. Send test emails to verify SMTP configuration
 
 ## 🔒 Security Best Practices
 
+### Environment Security
 1. **Never commit `.env` files** to version control
-2. **Use strong, unique secrets** for `BETTER_AUTH_SECRET` (32+ characters)
-3. **Rotate API keys regularly** (Mistral, Turso tokens)
-4. **Use App Passwords**, not regular passwords for Gmail
-5. **Trust the encryption** - Gmail passwords are automatically encrypted with AES-256-GCM
+2. **Use `.env.local`** for local development (automatically ignored by Git)
+3. **Rotate API keys regularly** (quarterly recommended)
+4. **Use strong secrets** - generate with `openssl rand -base64 32`
 
-## 🔧 Environment Validation Features
+### Production Security
+1. **Use environment-specific URLs** for `NEXT_PUBLIC_BETTER_AUTH_URL`
+2. **Enable HTTPS** in production (required for Better Auth)
+3. **Secure your R2 bucket** with proper CORS settings
+4. **Monitor API usage** to detect unusual activity
 
-The streamlined Zod validation ensures:
+### Database Security
+1. **Use Turso's built-in encryption** (automatic)
+2. **Regularly backup** your database
+3. **Monitor database size** and performance
+4. **Use read-only tokens** where appropriate
 
-- ✅ All required infrastructure variables are present
-- ✅ URLs are properly formatted
-- ✅ Secrets meet minimum length requirements
-- ✅ API keys are provided
-- ✅ Database configuration is complete
+## 🔧 Environment Validation
+
+The application uses comprehensive Zod validation for all environment variables:
+
+```typescript
+// Automatically validates on startup:
+✅ AI API keys (Mistral, Groq)
+✅ Database connection (Turso URL + token)
+✅ Authentication secrets (32+ character minimum)
+✅ File storage configuration (R2 credentials)
+✅ URL formats and required fields
+```
 
 ## 🆘 Troubleshooting
 
-### Environment Validation Failed
+### Environment Validation Errors
 
+#### Missing Required Variables
 ```bash
 ❌ Environment validation failed:
-MISTRAL_API_KEY: Required
-BETTER_AUTH_SECRET: Required
-NEXT_PUBLIC_BETTER_AUTH_URL: Required
+GROQ_API_KEY: GROQ_API_KEY is required
+R2_ACCESS_KEY_ID: R2_ACCESS_KEY_ID is required
 ```
 
-**Solution**: The application now only requires 5 core environment variables. Make sure all are set in your `.env` file.
+**Solution**: Ensure all 9 required environment variables are set in your `.env` file. Check against `.env.example`.
+
+#### Invalid URL Format
+```bash
+❌ TURSO_DATABASE_URL must be a valid URL
+```
+
+**Solution**: Ensure URLs start with proper protocol (`https://` for R2, `libsql://` for Turso).
+
+#### Secret Too Short
+```bash
+❌ BETTER_AUTH_SECRET must be at least 32 characters long
+```
+
+**Solution**: Generate a proper secret with `openssl rand -base64 32`.
 
 ### Build Errors
 
-If you get errors during `npm run build`:
+#### TypeScript Errors
+```bash
+❌ Type error: Cannot find module '@/lib/env'
+```
 
-1. Check that all required environment variables are set
-2. Ensure `NEXT_PUBLIC_BETTER_AUTH_URL` is correctly prefixed
-3. Verify your database connection details
+**Solution**: Run `npm run typecheck` to identify and fix TypeScript issues before building.
 
-### Email Not Working
+#### Missing Dependencies
+```bash
+❌ Module not found: Can't resolve 'better-auth'
+```
 
-1. **Check Profile Settings**: Ensure your Gmail configuration is complete in your user profile
-2. **Verify App Password**: Make sure you're using a Gmail App Password, not your regular password
-3. **Test SMTP**: Use the email preview feature to test your configuration
-4. **Check Encryption**: The system automatically handles password encryption/decryption
+**Solution**: Ensure all dependencies are installed with `npm install`.
 
-### User Registration Issues
+### Database Issues
 
-1. **Profile Completion**: Fill out all profile fields during signup
-2. **Gmail Configuration**: Add your Gmail settings through Profile Settings after signup
-3. **Job Posts**: Create job advertisements for better email organization
+#### Connection Failed
+```bash
+❌ LibsqlError: AUTHENTICATION_FAILED
+```
 
-## 📁 File Structure
+**Solution**: 
+1. Verify your `TURSO_AUTH_TOKEN` is correct
+2. Check that the database exists: `turso db list`
+3. Regenerate auth token if needed: `turso db tokens create <db-name>`
+
+#### Migration Errors
+```bash
+❌ No migration files found
+```
+
+**Solution**: 
+1. Generate migrations: `npx drizzle-kit generate`
+2. Ensure schema changes are saved before generating
+3. Check `drizzle.config.ts` configuration
+
+### File Storage Issues
+
+#### R2 Connection Failed
+```bash
+❌ S3ServiceException: The AWS Access Key Id you provided does not exist
+```
+
+**Solution**:
+1. Verify your R2 credentials in Cloudflare dashboard
+2. Ensure bucket name matches exactly (case-sensitive)
+3. Check API token permissions include Object Read & Write
+
+### Email Configuration Issues
+
+#### Gmail Authentication Failed
+```bash
+❌ Invalid login: 535-5.7.8 Username and Password not accepted
+```
+
+**Solution**:
+1. Verify you're using a Gmail App Password (not regular password)
+2. Enable 2-Factor Authentication on your Google account
+3. Generate new App Password if needed
+4. Check that Gmail address is correct
+
+#### Email Not Sending
+**Common causes**:
+1. Gmail App Password expired or revoked
+2. 2-Factor Authentication disabled
+3. "Less secure app access" still enabled (should be off)
+4. Incorrect SMTP settings (handled automatically)
+
+### AI Service Issues
+
+#### Mistral API Errors
+```bash
+❌ 401 Unauthorized: Invalid API key
+```
+
+**Solution**:
+1. Verify API key is correct and active
+2. Check billing and usage limits
+3. Regenerate API key if needed
+
+#### Groq API Errors
+```bash
+❌ 429 Too Many Requests: Rate limit exceeded
+```
+
+**Solution**:
+1. Wait for rate limit reset (usually 1 minute)
+2. Implement request queuing for high-volume usage
+3. Upgrade to higher tier if needed
+
+## 📊 Cost Estimation
+
+Here's a rough cost breakdown for running the application:
+
+### Free Tier Usage (Development/Testing)
+- **Turso Database**: Free (up to 1GB)
+- **Cloudflare R2**: Free (up to 10GB)
+- **Groq AI**: Free tier with generous limits
+- **Mistral AI**: Pay-per-use (~$2 for 100 resumes)
+
+### Small Team Usage (10-50 candidates/month)
+- **Turso Database**: Free to $5/month
+- **Cloudflare R2**: $1-5/month
+- **Groq AI**: Free to $10/month
+- **Mistral AI**: $10-20/month
+- **Total**: ~$15-40/month
+
+### Medium Team Usage (100-500 candidates/month)
+- **Turso Database**: $5-25/month
+- **Cloudflare R2**: $5-15/month
+- **Groq AI**: $10-50/month
+- **Mistral AI**: $50-100/month
+- **Total**: ~$70-190/month
+
+## 📁 Configuration Files
 
 ```
-.env                    # Your actual environment variables (5 required)
-.env.example           # Template with required variables
-src/lib/env.ts         # Streamlined Zod validation schema
-src/lib/crypto.ts      # Encryption utilities for sensitive data
+.env                    # Your environment variables (9 required)
+.env.example           # Template with all variables
+.env.local             # Local override (Git ignored)
+src/lib/env.ts         # Zod validation schema
+drizzle.config.ts      # Database configuration
+components.json        # shadcn/ui configuration
 ```
+
+## 🔄 Environment Updates
+
+When updating environment variables:
+
+1. **Development**: Update `.env` file and restart dev server
+2. **Production**: Update deployment platform environment variables
+3. **Database Changes**: Run migrations if schema changed
+4. **API Keys**: Update and test all affected services
+5. **Security**: Rotate secrets when rotating API keys
