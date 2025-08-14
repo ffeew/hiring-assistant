@@ -4,7 +4,9 @@ import { FileUploadSection } from "./file-upload-section";
 import { ResultsTable } from "./results-table";
 import { EmailPreviewModal } from "./email-preview-modal";
 import { JobPostSelector } from "./job-post-selector";
+import { FeatureCard } from "./ui/feature-card";
 import { useHiringAssistant } from "../hooks/use-hiring-assistant";
+import { Video, BrainCircuit, Zap } from "lucide-react";
 
 export function HomePage() {
 	const {
@@ -45,6 +47,28 @@ export function HomePage() {
 						Upload resumes to extract candidate information and send automated
 						emails
 					</p>
+				</div>
+
+				{/* Quick Access to Other Features */}
+				<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+					<FeatureCard
+						title="Interview Assistant"
+						description="Generate AI-powered questions for your candidates"
+						href="/interview-assistant"
+						icon={BrainCircuit}
+						buttonText="Create Questions"
+						variant="default"
+					/>
+
+					<FeatureCard
+						title="Live Interview"
+						description="Conduct interviews with real-time AI assistance"
+						href="/live-interview"
+						icon={Video}
+						buttonText="Start Interview"
+						variant="primary"
+						additionalIcon={Zap}
+					/>
 				</div>
 
 				<JobPostSelector

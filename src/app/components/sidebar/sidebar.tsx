@@ -15,6 +15,7 @@ import {
   Home,
   ChevronLeft,
   ChevronRight,
+  Video,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -48,6 +49,13 @@ const navigationSections: NavigationSection[] = [
         href: "/interview-assistant",
         icon: BrainCircuit,
         description: "Generate AI-powered interview questions",
+      },
+      {
+        name: "Live Interview",
+        href: "/live-interview",
+        icon: Video,
+        description: "Real-time interview with AI assistance",
+        badge: "New",
       },
     ],
   },

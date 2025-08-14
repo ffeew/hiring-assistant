@@ -1,0 +1,380 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import {
+	Card,
+	CardContent,
+	CardDescription,
+	CardHeader,
+	CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+	Play,
+	Users,
+	MessageSquare,
+	Clock,
+	AlertCircle,
+} from "lucide-react";
+
+import { useInterviewSession, CreateSessionData } from "@/app/hooks/use-interview-session";
+import { useSpeechRecognition } from "@/app/hooks/use-speech-recognition";
+import { useApplicants } from "@/app/interview-assistant/query/use-applicants";
+import { useJobPosts } from "@/app/interview-assistant/query/use-job-posts";
+import { useResumeFiles } from "@/app/interview-assistant/query/use-resume-files";
+
+import { SessionSetupModal } from "./session-setup-modal";
+import { LiveTranscript } from "./live-transcript";
+import { QuestionSuggestions } from "./question-suggestions";
+import { InterviewControls } from "./interview-controls";
+import { SessionSummary } from "./session-summary";
+
+export function LiveInterviewDashboard() {
+	const [showSetupModal, setShowSetupModal] = useState(false);
+	const [currentSpeaker, setCurrentSpeaker] = useState<
+		"interviewer" | "candidate"
+	>("candidate");
+	const [lastSpeechTime, setLastSpeechTime] = useState<number>(0);
+	const [autoSpeechDetection] = useState(true);
+
+	// Data fetching
+	const { data: applicants = [], isLoading: isLoadingApplicants } =
+		useApplicants();
+	const { data: jobPosts = [], isLoading: isLoadingJobPosts } = useJobPosts();
+	const { data: resumeFiles = [], isLoading: isLoadingResumes } =
+		useResumeFiles();
+
+	// Interview session management
+	const {
+		session,
+		conversationTurns,
+		currentSessionId,
+		isLoadingSession,
+		isStarting,
+		isEnding,
+		isGeneratingQuestions,
+		generatedQuestions,
+		conversationAnalysis,
+		createSession,
+		startSession,
+		endSession,
+		addConversationTurn,
+		generateDynamicQuestions,
+		sessionError,
+		addTurnError,
+		generateQuestionsError,
+	} = useInterviewSession();
+
+	// Speech recognition
+	const {
+		transcript,
+		interimTranscript,
+		isListening,
+		isSupported: isSpeechSupported,
+		confidence,
+		error: speechError,
+		startListening,
+		stopListening,
+		resetTranscript,
+	} = useSpeechRecognition({
+		continuous: true,
+		interimResults: true,
+		onResult: handleSpeechResult,
+		onEnd: handleSpeechEnd,
+	});
+
+	// Handle speech recognition results
+	function handleSpeechResult(
+		text: string,
+		confidenceScore: number,
+		isFinal: boolean
+	) {
+		if (
+			isFinal &&
+			text.trim() &&
+			currentSessionId &&
+			session?.status === "in_progress"
+		) {
+			setLastSpeechTime(Date.now());
+
+			// Add conversation turn
+			addConversationTurn({
+				speaker: currentSpeaker,
+				content: text.trim(),
+				confidence: Math.round(confidenceScore * 100),
+			});
+
+			// Auto-generate questions after candidate responses
+			if (currentSpeaker === "candidate" && conversationTurns.length > 0) {
+				const recentContext = conversationTurns
+					.slice(-3)
+					.map((turn) => `${turn.speaker}: ${turn.content}`)
+					.join("\n");
+
+				generateDynamicQuestions({
+					conversationContext: recentContext + `\ncandidate: ${text}`,
+					questionCount: 3,
+					lastFewTurns: 5,
+				});
+			}
+
+			resetTranscript();
+		}
+	}
+
+	// Handle speech recognition end
+	function handleSpeechEnd() {
+		// Auto-restart if session is active
+		if (session?.status === "in_progress" && currentSessionId) {
+			setTimeout(() => {
+				if (session?.status === "in_progress") {
+					startListening();
+				}
+			}, 1000);
+		}
+	}
+
+	// Auto-detect speaker changes based on speech patterns
+	useEffect(() => {
+		if (!autoSpeechDetection || !session || session.status !== "in_progress")
+			return;
+
+		const now = Date.now();
+		const timeSinceLastSpeech = now - lastSpeechTime;
+
+		// If there's been a pause longer than 3 seconds, assume speaker change
+		if (timeSinceLastSpeech > 3000 && lastSpeechTime > 0) {
+			setCurrentSpeaker((prev) =>
+				prev === "interviewer" ? "candidate" : "interviewer"
+			);
+		}
+	}, [transcript, lastSpeechTime, autoSpeechDetection, session]);
+
+	// Start new interview session
+	const handleStartNewSession = async (sessionData: CreateSessionData) => {
+		try {
+			await createSession(sessionData);
+			setShowSetupModal(false);
+		} catch (error) {
+			console.error("Failed to create session:", error);
+		}
+	};
+
+	// Start interview
+	const handleStartInterview = async () => {
+		if (!currentSessionId) return;
+
+		try {
+			await startSession(currentSessionId);
+			if (isSpeechSupported) {
+				startListening();
+			}
+		} catch (error) {
+			console.error("Failed to start interview:", error);
+		}
+	};
+
+	// End interview
+	const handleEndInterview = async () => {
+		if (!currentSessionId) return;
+
+		try {
+			stopListening();
+			await endSession(currentSessionId);
+		} catch (error) {
+			console.error("Failed to end interview:", error);
+		}
+	};
+
+	// Loading state
+	if (
+		isLoadingApplicants ||
+		isLoadingJobPosts ||
+		isLoadingResumes ||
+		isLoadingSession
+	) {
+		return (
+			<div className="flex items-center justify-center h-64">
+				<div className="text-center space-y-2">
+					<div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+					<p className="text-muted-foreground">
+						Loading interview dashboard...
+					</p>
+				</div>
+			</div>
+		);
+	}
+
+	// No session state
+	if (!currentSessionId) {
+		return (
+			<div className="space-y-6">
+				<Card>
+					<CardHeader>
+						<CardTitle className="flex items-center gap-2">
+							<Users className="h-5 w-5" />
+							Live Interview Assistant
+						</CardTitle>
+						<CardDescription>
+							Create a new interview session to begin real-time conversation
+							analysis
+						</CardDescription>
+					</CardHeader>
+					<CardContent>
+						<Button onClick={() => setShowSetupModal(true)} size="lg">
+							<Play className="h-4 w-4 mr-2" />
+							Start New Interview
+						</Button>
+					</CardContent>
+				</Card>
+
+				<SessionSetupModal
+					isOpen={showSetupModal}
+					onClose={() => setShowSetupModal(false)}
+					onSubmit={handleStartNewSession}
+					applicants={applicants}
+					jobPosts={jobPosts}
+					resumeFiles={resumeFiles}
+				/>
+			</div>
+		);
+	}
+
+	return (
+		<div className="space-y-6">
+			{/* Session Header */}
+			<Card>
+				<CardHeader>
+					<div className="flex items-center justify-between">
+						<div className="space-y-1">
+							<CardTitle className="flex items-center gap-2">
+								<MessageSquare className="h-5 w-5" />
+								{session?.title}
+							</CardTitle>
+							<CardDescription>
+								{session?.applicant.firstName} {session?.applicant.lastName} -{" "}
+								{session?.jobPost.title}
+							</CardDescription>
+						</div>
+						<div className="flex items-center gap-2">
+							<Badge
+								variant={
+									session?.status === "in_progress" ? "default" : "secondary"
+								}
+								className="flex items-center gap-1"
+							>
+								<Clock className="h-3 w-3" />
+								{session?.status}
+							</Badge>
+							{session?.interviewType && (
+								<Badge variant="outline">{session.interviewType}</Badge>
+							)}
+						</div>
+					</div>
+				</CardHeader>
+			</Card>
+
+			{/* Speech Recognition Status */}
+			{!isSpeechSupported && (
+				<Alert variant="destructive">
+					<AlertCircle className="h-4 w-4" />
+					<AlertDescription>
+						Speech recognition is not supported in your browser. You can still
+						manually add conversation turns.
+					</AlertDescription>
+				</Alert>
+			)}
+
+			{speechError && (
+				<Alert variant="destructive">
+					<AlertCircle className="h-4 w-4" />
+					<AlertDescription>
+						Speech recognition error: {speechError}
+					</AlertDescription>
+				</Alert>
+			)}
+
+			{/* Main Interview Interface */}
+			<div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+				{/* Left Column - Transcript */}
+				<div className="lg:col-span-2 space-y-4">
+					<LiveTranscript
+						conversationTurns={conversationTurns}
+						currentTranscript={transcript}
+						interimTranscript={interimTranscript}
+						currentSpeaker={currentSpeaker}
+						isListening={isListening}
+						confidence={confidence}
+					/>
+
+					<InterviewControls
+						session={session}
+						isListening={isListening}
+						currentSpeaker={currentSpeaker}
+						onSpeakerChange={setCurrentSpeaker}
+						onStartInterview={handleStartInterview}
+						onEndInterview={handleEndInterview}
+						onToggleListening={() =>
+							isListening ? stopListening() : startListening()
+						}
+						isStarting={isStarting}
+						isEnding={isEnding}
+						isSpeechSupported={isSpeechSupported}
+					/>
+				</div>
+
+				{/* Right Column - Question Suggestions */}
+				<div className="space-y-4">
+					<QuestionSuggestions
+						questions={generatedQuestions}
+						conversationAnalysis={conversationAnalysis}
+						isGenerating={isGeneratingQuestions}
+						onGenerateQuestions={() => {
+							if (conversationTurns.length > 0) {
+								const recentContext = conversationTurns
+									.slice(-5)
+									.map((turn) => `${turn.speaker}: ${turn.content}`)
+									.join("\n");
+								generateDynamicQuestions({
+									conversationContext: recentContext,
+									questionCount: 5,
+								});
+							}
+						}}
+						error={generateQuestionsError}
+					/>
+				</div>
+			</div>
+
+			{/* Session Complete */}
+			{session?.status === "completed" && (
+				<SessionSummary
+					session={session}
+					conversationTurns={conversationTurns}
+					conversationAnalysis={conversationAnalysis}
+				/>
+			)}
+
+			{/* Error Alerts */}
+			{sessionError && (
+				<Alert variant="destructive">
+					<AlertCircle className="h-4 w-4" />
+					<AlertDescription>
+						Session error: {sessionError.message}
+					</AlertDescription>
+				</Alert>
+			)}
+
+			{addTurnError && (
+				<Alert variant="destructive">
+					<AlertCircle className="h-4 w-4" />
+					<AlertDescription>
+						Failed to add conversation turn: {addTurnError.message}
+					</AlertDescription>
+				</Alert>
+			)}
+		</div>
+	);
+}

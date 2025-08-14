@@ -37,9 +37,11 @@ import {
 	CheckCircle,
 	AlertCircle,
 	Lightbulb,
+	Video,
 } from "lucide-react";
 import { useInterviewAssistant } from "@/app/hooks/use-interview-assistant";
 import { invalidateResumeFiles } from "@/app/interview-assistant/query/use-resume-files";
+import { CallToActionCard } from "@/app/components/ui/call-to-action-card";
 
 const generateQuestionsSchema = z.object({
 	applicantId: z.string().min(1, "Please select an applicant"),
@@ -383,6 +385,23 @@ export function InterviewAssistant({
 						</div>
 					</CardContent>
 				</Card>
+			)}
+
+			{/* Live Interview Call-to-Action */}
+			{data?.questions && data.questions.length > 0 && (
+				<CallToActionCard
+					title="Ready for the Interview?"
+					description="Take your questions to the next level with real-time AI assistance"
+					href="/live-interview"
+					icon={Video}
+					buttonText="Start Live Interview"
+					features={[
+						"Get real-time question suggestions during the interview",
+						"Receive AI-powered conversation analysis",
+						"Track interview progress with live transcription",
+						"Generate follow-up questions based on candidate responses"
+					]}
+				/>
 			)}
 		</div>
 	);

@@ -171,3 +171,59 @@ export const emailCommunication = sqliteTable("email_communication", {
   errorMessage: text("error_message"),
   deletedAt: integer("deleted_at", { mode: "timestamp" }),
 });
+
+export const interviewSession = sqliteTable("interview_session", {
+  id: text("id").primaryKey(),
+  userId: text("user_id")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
+  applicantId: text("applicant_id")
+    .notNull()
+    .references(() => applicant.id, { onDelete: "cascade" }),
+  jobPostId: text("job_post_id")
+    .notNull()
+    .references(() => jobPost.id, { onDelete: "cascade" }),
+  resumeFileId: text("resume_file_id")
+    .references(() => resumeFile.id, { onDelete: "set null" }),
+  title: text("title").notNull(),
+  status: text("status") // scheduled, in_progress, completed, cancelled
+    .$defaultFn(() => "scheduled")
+    .notNull(),
+  startTime: integer("start_time", { mode: "timestamp" }),
+  endTime: integer("end_time", { mode: "timestamp" }),
+  fullTranscript: text("full_transcript"), // Complete conversation transcript
+  sessionNotes: text("session_notes"), // Interviewer notes and observations
+  generatedQuestions: text("generated_questions"), // JSON array of all AI-generated questions
+  interviewType: text("interview_type") // screening, technical, behavioral, final
+    .$defaultFn(() => "screening")
+    .notNull(),
+  metadata: text("metadata"), // JSON object for additional session data
+  createdAt: integer("created_at", { mode: "timestamp" })
+    .$defaultFn(() => new Date())
+    .notNull(),
+  updatedAt: integer("updated_at", { mode: "timestamp" })
+    .$defaultFn(() => new Date())
+    .notNull(),
+  deletedAt: integer("deleted_at", { mode: "timestamp" }),
+});
+
+export const conversationTurn = sqliteTable("conversation_turn", {
+  id: text("id").primaryKey(),
+  sessionId: text("session_id")
+    .notNull()
+    .references(() => interviewSession.id, { onDelete: "cascade" }),
+  speaker: text("speaker").notNull(), // interviewer, candidate
+  content: text("content").notNull(), // What was said
+  timestamp: integer("timestamp", { mode: "timestamp" })
+    .$defaultFn(() => new Date())
+    .notNull(),
+  turnOrder: integer("turn_order").notNull(), // Sequential order in conversation
+  generatedQuestions: text("generated_questions"), // JSON array of questions generated after this turn
+  questionSuggestions: text("question_suggestions"), // JSON array of follow-up suggestions
+  analysis: text("analysis"), // AI analysis of the turn (sentiment, topics covered, etc.)
+  confidence: integer("confidence"), // Speech recognition confidence (0-100)
+  duration: integer("duration"), // Duration of speaking turn in milliseconds
+  createdAt: integer("created_at", { mode: "timestamp" })
+    .$defaultFn(() => new Date())
+    .notNull(),
+});

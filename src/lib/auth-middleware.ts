@@ -6,6 +6,10 @@ export interface AuthenticatedRequest extends NextRequest {
   user: Session['user'];
 }
 
+export interface AuthenticatedParamsRequest extends AuthenticatedRequest {
+  params: Record<string, string>;
+}
+
 export type AuthenticatedHandler = (
   request: AuthenticatedRequest
 ) => Promise<NextResponse>;
@@ -71,7 +75,7 @@ export function withAuthParams(handler: AuthenticatedParamsHandler): (request: N
       const authenticatedRequest = request as AuthenticatedRequest;
       authenticatedRequest.user = session.user;
 
-      // Call the original handler with authenticated request
+      // Call the original handler with authenticated request and context
       return await handler(authenticatedRequest, context);
     } catch (error) {
       console.error('Authentication middleware error:', error);
