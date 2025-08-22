@@ -132,7 +132,7 @@ Make questions specific to the candidate's background and the job requirements. 
 
     try {
       const result = await generateObject({
-        model: groq("moonshotai/kimi-k2-instruct"),
+        model: groq("openai/gpt-oss-120b"),
         prompt,
         schema: interviewQuestionsSchema,
       });
