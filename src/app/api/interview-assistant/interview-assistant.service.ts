@@ -94,41 +94,47 @@ export class InterviewAssistantService {
     // Generate interview questions using AI
     const prompt = `You are an expert interviewer helping to assess a candidate's qualifications. Your goal is to generate insightful questions that verify the candidate's claims, assess their true capabilities and check if they fit the job requirements.
 
-JOB POST INFORMATION:
-Title: ${jobInfo.title}
-Department: ${jobInfo.department || "Not specified"}
-Experience Level: ${jobInfo.experienceLevel || "Not specified"}
-Description: ${jobInfo.description}
-Requirements: ${requirements.join(", ")}
-Responsibilities: ${responsibilities.join(", ")}
+<job_requirements>
+<title>${jobInfo.title}</title>
+<department>${jobInfo.department || "Not specified"}</department>
+<experience_level>${jobInfo.experienceLevel || "Not specified"}</experience_level>
+<description>${jobInfo.description}</description>
+<requirements>${requirements.join(", ")}</requirements>
+<responsibilities>${responsibilities.join(", ")}</responsibilities>
+</job_requirements>
 
-CANDIDATE INFORMATION:
-Name: ${applicantInfo.firstName} ${applicantInfo.lastName}
-Email: ${applicantInfo.email}
+<candidate_profile>
+<name>${applicantInfo.firstName} ${applicantInfo.lastName}</name>
+<email>${applicantInfo.email}</email>
+</candidate_profile>
 
-RESUME CONTENT:
+<candidate_resume>
 ${resume.resumeContent}
+</candidate_resume>
 
-INSTRUCTIONS:
+<instructions>
 Generate ${data.questionCount} interview questions that:
-1. Verify specific claims made in the resume
-2. Test actual knowledge and skills mentioned
+1. Verify specific claims made in the candidate's resume (inside <candidate_resume> tags)
+2. Test actual knowledge and skills the candidate mentions in their resume
 3. Assess problem-solving abilities relevant to the role
-4. Check for depth of experience in claimed areas
-5. Identify potential red flags or exaggerations
-6. Explore soft skills and cultural fit
-7. Verify technical skills and knowledge
+4. Check for depth of experience in areas the candidate claims expertise
+5. Identify potential red flags or inconsistencies in the candidate's background
+6. Explore soft skills and cultural fit based on the candidate's actual experience
+7. Verify technical skills and knowledge the candidate lists in their resume
+
+IMPORTANT: Base questions on what the candidate ACTUALLY wrote in their <candidate_resume>, not on the <job_requirements>. Ask about the candidate's real experience, projects, and skills as described in their resume.
 
 Focus areas: ${data.focusAreas?.join(", ") || "technical, experience, soft_skills, verification"}
 
 For each question, provide:
-- The actual question to ask
+- The actual question to ask the candidate
 - The category (technical, experience, soft_skills, verification)
-- Your reasoning for asking this question
-- What you expect in a good response
+- Your reasoning for asking this question based on their actual resume content
+- What you expect in a good response from this specific candidate
 - An example response that would indicate a strong candidate
 
-Make questions specific to the candidate's background and the job requirements. Avoid generic questions.`;
+Make questions specific to this candidate's actual background from their resume and how it relates to the job requirements. Avoid generic questions.
+</instructions>`;
 
     try {
       const result = await generateObject({
