@@ -1,5 +1,3 @@
-"use client";
-
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
 import type { EmailRequestData, EmailPreviewRequestData, CreateJobPostData, UpdateJobPostData, ProfileUpdateData } from '@/app/types';

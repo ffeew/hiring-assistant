@@ -1,5 +1,3 @@
-"use client";
-
 import { useState, useEffect } from "react";
 import type { ExtractedData, SuccessfulExtractionData, JobPost } from "../types";
 import { EmailTemplate } from "../types";

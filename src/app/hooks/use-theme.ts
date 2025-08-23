@@ -1,5 +1,3 @@
-"use client";
-
 import { useTheme as useNextTheme } from "next-themes";
 import { useEffect, useState } from "react";
 import type { ThemeMode } from "../../lib/theme-config";

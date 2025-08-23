@@ -1,5 +1,3 @@
-"use client";
-
 import { queryClient } from "@/app/providers/query-provider";
 import { useQuery } from "@tanstack/react-query";
 

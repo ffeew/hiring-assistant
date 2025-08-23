@@ -1,5 +1,3 @@
-"use client";
-
 // Re-export hooks from the centralized API mutations file
 export {
   useJobPostsQuery as useJobPosts,
