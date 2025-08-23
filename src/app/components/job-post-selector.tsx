@@ -93,9 +93,11 @@ export function JobPostSelector({
           </div>
         ) : (
           <Alert>
-            <AlertCircle className="h-4 w-4" />
             <AlertDescription className="flex items-center justify-between">
-              <span>No job posts found. Create one first to organize your candidates properly.</span>
+              <div className="flex items-center gap-2">
+                <AlertCircle className="h-4 w-4" />
+                <span>No job posts found. Create one first to organize your candidates properly.</span>
+              </div>
               <Button asChild size="sm">
                 <Link href="/job-posts">
                   <Plus className="h-4 w-4 mr-1" />
