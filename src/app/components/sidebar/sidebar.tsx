@@ -84,7 +84,6 @@ const navigationSections: NavigationSection[] = [
         href: "/profile",
         icon: User,
         description: "Manage your account settings",
-        badge: "Soon",
       },
     ],
   },
