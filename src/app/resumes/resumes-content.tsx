@@ -130,8 +130,8 @@ export function ResumesContent() {
         <CardContent className="flex items-center justify-center h-64">
           <div className="text-center">
             <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">Error Loading Resumes</h3>
-            <p className="text-gray-600 mb-4">{error}</p>
+            <h3 className="text-lg font-semibold text-foreground mb-2">Error Loading Resumes</h3>
+            <p className="text-muted-foreground mb-4">{error}</p>
             <Button onClick={fetchResumeFiles}>Try Again</Button>
           </div>
         </CardContent>
@@ -152,9 +152,9 @@ export function ResumesContent() {
         <Card>
           <CardContent className="flex items-center justify-center h-64">
             <div className="text-center">
-              <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">No Resumes Found</h3>
-              <p className="text-gray-600 mb-4">
+              <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-foreground mb-2">No Resumes Found</h3>
+              <p className="text-muted-foreground mb-4">
                 Upload some resumes from the Resume Processing page to get started.
               </p>
               <Button asChild>
@@ -189,12 +189,12 @@ export function ResumesContent() {
               
               <CardContent className="pt-0">
                 <div className="space-y-3">
-                  <div className="flex items-center justify-between text-sm text-gray-600">
+                  <div className="flex items-center justify-between text-sm text-muted-foreground">
                     <span>{formatFileSize(resume.fileSize)}</span>
                     <span>{resume.mimeType.split('/')[1].toUpperCase()}</span>
                   </div>
                   
-                  <div className="flex items-center gap-2 text-sm text-gray-600">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Calendar className="h-4 w-4" />
                     <span>{formatDate(resume.createdAt)}</span>
                   </div>
