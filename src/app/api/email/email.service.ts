@@ -26,9 +26,35 @@ export class EmailService {
   private transporter: nodemailer.Transporter;
   private userConfig: UserEmailConfig;
 
+  static validateConfiguration(config: UserEmailConfig): { isValid: boolean; errors: string[] } {
+    const errors: string[] = [];
+    
+    if (!config.gmailAddress || config.gmailAddress.trim() === '') {
+      errors.push('Gmail address is required');
+    }
+    
+    if (!config.gmailAppPassword || config.gmailAppPassword.trim() === '') {
+      errors.push('Gmail app password is required');
+    }
+    
+    if (!config.senderName || config.senderName.trim() === '') {
+      errors.push('Sender name is required');
+    }
+    
+    return {
+      isValid: errors.length === 0,
+      errors
+    };
+  }
+
+  static hasCompleteConfiguration(user: { gmailAddress?: string | null; gmailAppPassword?: string | null; name?: string | null }): boolean {
+    return !!(user.gmailAddress && user.gmailAppPassword && user.name);
+  }
+
   constructor(userConfig: UserEmailConfig) {
-    if (!userConfig.gmailAddress || !userConfig.gmailAppPassword || !userConfig.senderName) {
-      throw new Error('Email configuration is incomplete. User must have gmailAddress, gmailAppPassword, and senderName configured.');
+    const validationResult = EmailService.validateConfiguration(userConfig);
+    if (!validationResult.isValid) {
+      throw new Error(`Email configuration is incomplete: ${validationResult.errors.join(', ')}`);
     }
 
     this.userConfig = userConfig;

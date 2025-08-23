@@ -17,12 +17,27 @@ import { User, Mail, Building, AlertCircle, CheckCircle, X } from "lucide-react"
 
 type User = Session["user"];
 
-const profileSchema = z.object({
-	gmailAddress: z.string().email("Please enter a valid email address"),
-	gmailAppPassword: z.string().min(1, "App password is required"),
-	companyName: z.string().optional(),
-	jobTitle: z.string().optional(),
-});
+const profileSchema = z
+	.object({
+		gmailAddress: z.string().email("Please enter a valid email address").optional().or(z.literal("")),
+		gmailAppPassword: z
+			.string()
+			.optional()
+			.refine((val) => !val || (val.length === 16), {
+				message: "Gmail app password must be 16 characters if provided",
+			}),
+		companyName: z.string().optional(),
+		jobTitle: z.string().optional(),
+	})
+	.refine((data) => {
+		// If one email field is provided, both should be provided
+		const hasGmailAddress = data.gmailAddress && data.gmailAddress.trim() !== "";
+		const hasGmailPassword = data.gmailAppPassword && data.gmailAppPassword.trim() !== "";
+		return (hasGmailAddress && hasGmailPassword) || (!hasGmailAddress && !hasGmailPassword);
+	}, {
+		message: "Both Gmail address and app password are required if you want to configure email",
+		path: ["gmailAppPassword"],
+	});
 
 type ProfileFormData = z.infer<typeof profileSchema>;
 
@@ -118,10 +133,10 @@ export function ProfileSettingsModal({
 								name="gmailAddress"
 								render={({ field }) => (
 									<FormItem>
-										<FormLabel>Gmail Address *</FormLabel>
+										<FormLabel>Gmail Address</FormLabel>
 										<FormControl>
 											<Input
-												placeholder="your.email@gmail.com"
+												placeholder="your.email@gmail.com (optional)"
 												type="email"
 												disabled={updateProfileMutation.isPending}
 												{...field}
@@ -137,10 +152,10 @@ export function ProfileSettingsModal({
 								name="gmailAppPassword"
 								render={({ field }) => (
 									<FormItem>
-										<FormLabel>Gmail App Password *</FormLabel>
+										<FormLabel>Gmail App Password</FormLabel>
 										<FormControl>
 											<Input
-												placeholder="16-character app password"
+												placeholder="16-character app password (optional)"
 												type="password"
 												disabled={updateProfileMutation.isPending}
 												{...field}
@@ -148,7 +163,7 @@ export function ProfileSettingsModal({
 										</FormControl>
 										<p className="text-xs text-muted-foreground">
 											Generate an app password in your Google Account settings. Your
-											password is encrypted and stored securely.
+											password is encrypted and stored securely. Leave both fields empty to disable email functionality.
 										</p>
 										<FormMessage />
 									</FormItem>

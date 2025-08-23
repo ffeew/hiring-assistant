@@ -21,17 +21,28 @@ const signupSchema = z
 		email: z.string().email("Please enter a valid email address"),
 		password: z.string().min(6, "Password must be at least 6 characters"),
 		confirmPassword: z.string(),
-		gmailAddress: z.string().email("Please enter a valid Gmail address"),
+		gmailAddress: z.string().email("Please enter a valid Gmail address").optional().or(z.literal("")),
 		gmailAppPassword: z
 			.string()
-			.min(16, "Gmail app password must be 16 characters")
-			.max(16, "Gmail app password must be 16 characters"),
+			.optional()
+			.refine((val) => !val || (val.length === 16), {
+				message: "Gmail app password must be 16 characters if provided",
+			}),
 		companyName: z.string().optional(),
 		jobTitle: z.string().optional(),
 	})
 	.refine((data) => data.password === data.confirmPassword, {
 		message: "Passwords do not match",
 		path: ["confirmPassword"],
+	})
+	.refine((data) => {
+		// If one email field is provided, both should be provided
+		const hasGmailAddress = data.gmailAddress && data.gmailAddress.trim() !== "";
+		const hasGmailPassword = data.gmailAppPassword && data.gmailAppPassword.trim() !== "";
+		return (hasGmailAddress && hasGmailPassword) || (!hasGmailAddress && !hasGmailPassword);
+	}, {
+		message: "Both Gmail address and app password are required if you want to configure email during signup",
+		path: ["gmailAppPassword"],
 	});
 
 type SignupFormData = z.infer<typeof signupSchema>;
@@ -64,8 +75,8 @@ export function SignUpForm() {
 				email: data.email,
 				password: data.password,
 				name: data.name,
-				gmailAddress: data.gmailAddress,
-				gmailAppPassword: data.gmailAppPassword,
+				gmailAddress: data.gmailAddress || undefined,
+				gmailAppPassword: data.gmailAppPassword || undefined,
 				companyName: data.companyName || undefined,
 				jobTitle: data.jobTitle || undefined,
 			});
@@ -180,7 +191,7 @@ export function SignUpForm() {
 								<h3 className="text-lg font-medium">Email Configuration</h3>
 								<Separator />
 								<p className="text-xs text-muted-foreground">
-									Required to send automated emails to candidates
+									Optional: Configure now or set up later in your profile. Required for sending automated emails to candidates.
 								</p>
 							</div>
 
@@ -189,9 +200,9 @@ export function SignUpForm() {
 								name="gmailAddress"
 								render={({ field }) => (
 									<FormItem>
-										<FormLabel>Gmail Address *</FormLabel>
+										<FormLabel>Gmail Address</FormLabel>
 										<FormControl>
-											<Input placeholder="your.email@gmail.com" type="email" disabled={isLoading} {...field} />
+											<Input placeholder="your.email@gmail.com (optional)" type="email" disabled={isLoading} {...field} />
 										</FormControl>
 										<FormMessage />
 									</FormItem>
@@ -203,9 +214,9 @@ export function SignUpForm() {
 								name="gmailAppPassword"
 								render={({ field }) => (
 									<FormItem>
-										<FormLabel>Gmail App Password *</FormLabel>
+										<FormLabel>Gmail App Password</FormLabel>
 										<FormControl>
-											<Input placeholder="16-character app password" type="password" disabled={isLoading} {...field} />
+											<Input placeholder="16-character app password (optional)" type="password" disabled={isLoading} {...field} />
 										</FormControl>
 										<FormMessage />
 										<p className="text-xs text-muted-foreground">

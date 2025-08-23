@@ -35,8 +35,8 @@ export const auth = betterAuth({
   },
   hooks: {
     before: createAuthMiddleware(async (ctx) => {
-      // Encrypt Gmail app password before signup
-      if (ctx.path === "/sign-up/email" && ctx.body?.gmailAppPassword) {
+      // Encrypt Gmail app password before signup (only if provided)
+      if (ctx.path === "/sign-up/email" && ctx.body?.gmailAppPassword && ctx.body.gmailAppPassword.trim() !== "") {
         return {
           context: {
             ...ctx,
@@ -44,6 +44,24 @@ export const auth = betterAuth({
               ...ctx.body,
               gmailAppPassword: safeEncrypt(ctx.body.gmailAppPassword),
             },
+          }
+        };
+      }
+      
+      // Clear empty Gmail fields to avoid storing empty strings
+      if (ctx.path === "/sign-up/email") {
+        const updatedBody = { ...ctx.body };
+        if (!updatedBody.gmailAddress || updatedBody.gmailAddress.trim() === "") {
+          updatedBody.gmailAddress = undefined;
+        }
+        if (!updatedBody.gmailAppPassword || updatedBody.gmailAppPassword.trim() === "") {
+          updatedBody.gmailAppPassword = undefined;
+        }
+        
+        return {
+          context: {
+            ...ctx,
+            body: updatedBody,
           }
         };
       }

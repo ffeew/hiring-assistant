@@ -14,10 +14,21 @@ async function generateEmailPreviews(request: AuthenticatedRequest) {
     const validatedData = emailPreviewBodySchema.parse(body);
     const { recipients } = validatedData;
 
-    // Check if user has email configuration
-    if (!request.user.gmailAddress || !request.user.gmailAppPassword || !request.user.name) {
+    // Check if user has email configuration using the new validation method
+    if (!EmailService.hasCompleteConfiguration(request.user)) {
+      const missingFields = [];
+      if (!request.user.gmailAddress) missingFields.push('Gmail address');
+      if (!request.user.gmailAppPassword) missingFields.push('Gmail app password');
+      if (!request.user.name) missingFields.push('profile name');
+
       return NextResponse.json(
-        { error: 'Email service not configured. Please configure your Gmail address, app password, and ensure your profile name is set.' },
+        { 
+          error: 'Email service not configured',
+          details: [{
+            field: 'email_configuration',
+            message: `Please configure the following in your profile settings: ${missingFields.join(', ')}. Go to Profile Settings to set up email functionality.`
+          }]
+        },
         { status: 400 }
       );
     }
@@ -26,9 +37,9 @@ async function generateEmailPreviews(request: AuthenticatedRequest) {
     const decryptedPassword = request.user.gmailAppPassword ? safeDecrypt(request.user.gmailAppPassword) : '';
 
     const userConfig: UserEmailConfig = {
-      gmailAddress: request.user.gmailAddress,
+      gmailAddress: request.user.gmailAddress || '',
       gmailAppPassword: decryptedPassword,
-      senderName: request.user.name,
+      senderName: request.user.name || '',
       companyName: request.user.companyName || undefined,
       jobTitle: request.user.jobTitle || undefined,
     };

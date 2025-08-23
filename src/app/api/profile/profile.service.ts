@@ -26,14 +26,18 @@ export class ProfileService {
   static async updateProfile(userId: string, data: UpdateProfileBody) {
     const { gmailAddress, gmailAppPassword, companyName, jobTitle } = data;
 
-    // Encrypt password before storing
-    const encryptedPassword = gmailAppPassword ? safeEncrypt(gmailAppPassword) : gmailAppPassword;
+    // Handle empty strings - convert to null for database storage
+    const cleanGmailAddress = gmailAddress && gmailAddress.trim() !== "" ? gmailAddress : null;
+    const cleanGmailPassword = gmailAppPassword && gmailAppPassword.trim() !== "" ? gmailAppPassword : null;
+
+    // Encrypt password before storing (only if provided)
+    const encryptedPassword = cleanGmailPassword ? safeEncrypt(cleanGmailPassword) : null;
 
     // Update user profile in database
     const [updatedUser] = await db
       .update(userTable)
       .set({
-        gmailAddress,
+        gmailAddress: cleanGmailAddress,
         gmailAppPassword: encryptedPassword,
         companyName: companyName || null,
         jobTitle: jobTitle || null,
