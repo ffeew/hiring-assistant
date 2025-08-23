@@ -103,14 +103,28 @@ R2_BUCKET_NAME=your-bucket-name
 
 **Email and company settings are now configured per-user through the application interface**, not environment variables. This enables multi-user support with different email configurations.
 
-### 📧 Email Configuration (Per User)
+### 📧 Email Configuration (Optional Setup)
 
-Each user can configure their own email settings through the **Profile Settings** in the application:
+**New Feature**: Users can now sign up and use the application **without configuring email initially**. Email setup is completely optional during signup and can be configured later when needed.
 
-1. **Gmail Address**: Your Gmail email address
-2. **Gmail App Password**: 16-character app password (encrypted and stored securely)
-3. **Company Name**: Your company name (used in email templates)
-4. **Job Title**: Your job title (used in email signatures)
+#### Setup Options:
+1. **During Signup (Optional)**:
+   - Gmail Address: Your Gmail email address
+   - Gmail App Password: 16-character app password
+   - Company Name: Your company name
+   - Job Title: Your job title
+
+2. **After Signup (Profile Settings)**:
+   - Complete profile page with email configuration status
+   - Visual indicators showing whether email is configured
+   - One-click access to configure email when needed
+   - Account security overview with encryption status
+
+#### Smart Configuration Validation:
+- **Progressive Setup**: Use the app immediately, configure email when you need it
+- **Clear Error Messages**: Detailed guidance when email features are accessed without configuration
+- **Setup Prompts**: Helpful suggestions to configure email when trying to use email features
+- **Optional Fields**: Both Gmail address and app password can be left empty during signup
 
 ### 🏢 Job Posts Management
 
@@ -125,6 +139,16 @@ Users can create and manage job advertisements through the application:
 - **Encrypted Storage**: Gmail passwords are encrypted using AES-256-GCM before storage
 - **Per-User Isolation**: Each user's email configuration is separate and secure
 - **Automatic Encryption**: Passwords are automatically encrypted/decrypted as needed
+
+### Profile Management Features:
+
+The application includes a comprehensive profile page (`/profile`) with:
+
+- **Account Overview**: View creation date, last update, and account status
+- **Email Configuration Status**: Visual badges showing whether email is configured
+- **Security Information**: View encryption status and data security measures  
+- **Quick Actions**: Easy access to configure email or update profile settings
+- **Progressive Setup Guidance**: Clear instructions for completing email setup when needed
 
 ### How to get Gmail App Password:
 
@@ -182,9 +206,12 @@ npm run dev
 
 1. Navigate to `http://localhost:3000`
 2. Create an account via `/signup`
-3. Configure your profile settings (Gmail, company details)
+   - **Option A**: Configure Gmail settings during signup for immediate email functionality
+   - **Option B**: Skip email configuration and set up later via profile settings
+3. Explore the profile page to see account status and configuration options
 4. Create your first job post
 5. Test the resume upload workflow
+6. Configure email later if needed (go to Profile → Settings)
 
 ## 🧪 Testing Your Configuration
 
@@ -217,9 +244,10 @@ Upload a test resume through the application. Check your R2 bucket to confirm fi
 
 ### 5. Email System Test
 
-1. Configure your Gmail settings in profile
-2. Upload resumes and use email preview
-3. Send test emails to verify SMTP configuration
+1. **Test without email configuration**: Try accessing email features to see helpful error messages and setup prompts
+2. **Configure Gmail settings**: Go to Profile → Settings to configure your Gmail address and app password
+3. **Upload resumes and preview**: Use email preview to see template customization
+4. **Send test emails**: Verify SMTP configuration and email delivery
 
 ## 🔒 Security Best Practices
 

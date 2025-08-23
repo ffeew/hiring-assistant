@@ -66,7 +66,7 @@ export function LandingPage() {
 									Get Started
 								</Link>
 								<a
-									href="https://github.com/ffeew/hiring-assistant"
+									href="#"
 									target="_blank"
 									rel="noopener noreferrer"
 									className="hover:text-foreground transition-colors"
@@ -74,7 +74,7 @@ export function LandingPage() {
 									GitHub
 								</a>
 								<a
-									href="https://github.com/ffeew/hiring-assistant/blob/main/README.md"
+									href="#"
 									target="_blank"
 									rel="noopener noreferrer"
 									className="hover:text-foreground transition-colors"

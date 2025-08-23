@@ -25,6 +25,7 @@ The `ThemeToggle` component provides an elegant cycling button with icons and la
 - **☀️ Light** → **🌙 Dark** → **🖥️ System** → repeat
 
 **Features:**
+
 - Dynamic icons (Sun/Moon/Monitor) with hover animations
 - Responsive text labels (hidden on mobile)
 - Loading state to prevent hydration issues
@@ -45,8 +46,9 @@ export function Header() {
 ```
 
 **Visual States:**
+
 - **Light Mode**: ☀️ Sun icon with "Light" label
-- **Dark Mode**: 🌙 Moon icon with "Dark" label  
+- **Dark Mode**: 🌙 Moon icon with "Dark" label
 - **System Mode**: 🖥️ Monitor icon with "System" label
 - **Loading**: Pulsing placeholder to prevent flash
 
@@ -58,15 +60,15 @@ The custom `useTheme` hook wraps `next-themes` with additional utilities:
 import { useTheme } from "@/app/hooks/use-theme";
 
 export function ThemeAwareComponent() {
-	const { 
-		theme,           // "light" | "dark" | "system" | undefined
-		resolvedTheme,   // "light" | "dark" | undefined (actual resolved theme)
-		systemTheme,     // "light" | "dark" | undefined (OS preference)
-		isDark,          // boolean (true if resolved theme is dark)
-		mounted,         // boolean (prevents hydration issues)
-		cycleTheme,      // () => void (cycles through themes)
-		getThemeLabel,   // () => string (returns display label)
-		setTheme         // (theme: ThemeMode) => void (directly set theme)
+	const {
+		theme, // "light" | "dark" | "system" | undefined
+		resolvedTheme, // "light" | "dark" | undefined (actual resolved theme)
+		systemTheme, // "light" | "dark" | undefined (OS preference)
+		isDark, // boolean (true if resolved theme is dark)
+		mounted, // boolean (prevents hydration issues)
+		cycleTheme, // () => void (cycles through themes)
+		getThemeLabel, // () => string (returns display label)
+		setTheme, // (theme: ThemeMode) => void (directly set theme)
 	} = useTheme();
 
 	// Always check mounted state to prevent hydration mismatches
@@ -100,6 +102,7 @@ export function ThemeAwareComponent() {
 ```
 
 **Hook Properties:**
+
 - **theme**: User's selected theme preference
 - **resolvedTheme**: Actual theme being applied (resolves "system" to "light"/"dark")
 - **systemTheme**: OS/browser theme preference
@@ -115,28 +118,29 @@ Theme settings are centralized in `src/lib/theme-config.ts`:
 ```typescript
 export const themeConfig = {
 	// HTML attribute for theme - uses 'class' for shadcn/ui compatibility
-	attribute: 'class',
-	
+	attribute: "class",
+
 	// Default theme when user visits for the first time
-	defaultTheme: 'system',
-	
+	defaultTheme: "system",
+
 	// Whether to switch between light and dark based on system theme
 	enableSystem: true,
-	
+
 	// Enable smooth CSS transitions when switching themes
 	disableTransitionOnChange: false,
-	
+
 	// localStorage key for persisting user preference
-	storageKey: 'hiring-assistant-theme',
-	
+	storageKey: "hiring-assistant-theme",
+
 	// Available themes (order matters for cycling)
-	themes: ['light', 'dark', 'system'] as const,
+	themes: ["light", "dark", "system"] as const,
 } as const;
 
 export type ThemeMode = (typeof themeConfig.themes)[number];
 ```
 
 **Key Configuration Details:**
+
 - **attribute: 'class'** - Uses CSS classes (.light/.dark) instead of data attributes for better shadcn/ui compatibility
 - **defaultTheme: 'system'** - Respects user's OS preference by default
 - **enableSystem: true** - Allows automatic switching based on OS theme changes
@@ -249,7 +253,7 @@ export const cardVariants = {
 
 export const iconSizes = {
 	sm: "h-3 w-3",
-	md: "h-4 w-4", 
+	md: "h-4 w-4",
 	lg: "h-5 w-5",
 	xl: "h-6 w-6",
 } as const;
@@ -276,12 +280,12 @@ export default function RootLayout({ children }) {
 		<html lang="en" suppressHydrationWarning>
 			<body>
 				<ThemeProvider
-					attribute={themeConfig.attribute}           // 'class'
-					defaultTheme={themeConfig.defaultTheme}     // 'system'
-					enableSystem={themeConfig.enableSystem}     // true
+					attribute={themeConfig.attribute} // 'class'
+					defaultTheme={themeConfig.defaultTheme} // 'system'
+					enableSystem={themeConfig.enableSystem} // true
 					disableTransitionOnChange={themeConfig.disableTransitionOnChange} // false
-					storageKey={themeConfig.storageKey}         // 'hiring-assistant-theme'
-					themes={[...themeConfig.themes]}            // ['light', 'dark', 'system']
+					storageKey={themeConfig.storageKey} // 'hiring-assistant-theme'
+					themes={[...themeConfig.themes]} // ['light', 'dark', 'system']
 				>
 					{children}
 				</ThemeProvider>
@@ -292,6 +296,7 @@ export default function RootLayout({ children }) {
 ```
 
 **Key Props:**
+
 - **suppressHydrationWarning** - Prevents Next.js warnings during theme resolution
 - **attribute="class"** - Uses CSS classes instead of data attributes for better compatibility
 - **themes array spread** - Ensures proper array type inference
@@ -299,22 +304,26 @@ export default function RootLayout({ children }) {
 ## Accessibility Features
 
 ### WCAG 2.1 AA Compliance
+
 - **Contrast ratios** - All color combinations meet WCAG AA standards (4.5:1 minimum)
 - **Focus indicators** - Clear focus rings with `--ring` color for keyboard navigation
 - **High contrast mode** - Enhanced contrast ratios in system high contrast mode
 - **Color independence** - Information never conveyed by color alone
 
 ### Screen Reader Support
+
 - **ARIA labels** - Theme toggle has descriptive `aria-label` and `title` attributes
 - **Semantic HTML** - Proper button elements with meaningful text content
 - **Live announcements** - Theme changes announced to screen readers via state changes
 
 ### Motion & Animation
+
 - **Reduced motion support** - Respects `prefers-reduced-motion: reduce` preference
 - **Smooth transitions** - 300ms transitions for non-reduced motion users
 - **No flash transitions** - Prevents jarring theme switches
 
 ### Keyboard Navigation
+
 - **Tab order** - Theme toggle properly included in tab sequence
 - **Enter/Space activation** - Standard button interaction patterns
 - **Focus management** - Maintains focus state during theme changes
@@ -322,18 +331,21 @@ export default function RootLayout({ children }) {
 ## Performance Optimizations
 
 ### Server-Side Rendering (SSR)
+
 - **SSR-safe implementation** - No flash of unstyled content (FOUC)
 - **Hydration-friendly** - Proper mounting checks prevent hydration mismatches
 - **suppressHydrationWarning** - Handles expected theme resolution differences
 - **Inline styles** - Critical theme styles inlined to prevent FOUC
 
 ### Runtime Performance
+
 - **CSS-only transitions** - No JavaScript animation for theme changes
 - **Efficient re-renders** - Minimal React re-renders on theme change
 - **Cached computations** - Theme resolution cached by next-themes
 - **Lightweight bundle** - next-themes adds minimal runtime overhead (~2.3kb)
 
 ### CSS Optimizations
+
 - **CSS Custom Properties** - Efficient theme switching via CSS variables
 - **Reduced specificity conflicts** - Proper CSS cascade management
 - **Optimized selector performance** - Minimal use of complex selectors
@@ -342,12 +354,14 @@ export default function RootLayout({ children }) {
 ## Browser Support
 
 ### Modern Browser Support
+
 - ✅ **Chrome/Edge 88+** - Full support with modern CSS features
-- ✅ **Firefox 87+** - Complete theme system compatibility  
+- ✅ **Firefox 87+** - Complete theme system compatibility
 - ✅ **Safari 14+** - System theme detection and CSS variables
 - ✅ **Mobile browsers** - iOS Safari 14+, Chrome Mobile 88+
 
 ### Feature Detection
+
 - ✅ **CSS Custom Properties** - Required for theme system
 - ✅ **prefers-color-scheme** - System theme detection
 - ✅ **localStorage** - Theme preference persistence
@@ -355,6 +369,7 @@ export default function RootLayout({ children }) {
 - ✅ **OKLCH color space** - Modern color definitions (with fallbacks)
 
 ### Graceful Degradation
+
 - **CSS fallbacks** - Hex color fallbacks for OKLCH values
 - **No-JS support** - Basic styling without JavaScript theme switching
 - **Legacy browser handling** - Graceful fallback to default light theme
@@ -364,11 +379,13 @@ export default function RootLayout({ children }) {
 ### Hydration Mismatch Errors
 
 **Problem**: React hydration errors related to theme state
+
 ```
 Warning: Text content did not match. Server: "" Client: "Dark"
 ```
 
 **Solutions**:
+
 ```tsx
 // ✅ CORRECT - Always check mounted state
 const { mounted, theme } = useTheme();
@@ -387,20 +404,22 @@ return <div>Current theme: {theme}</div>; // Will cause hydration error
 **Problem**: Theme preference resets on page reload
 
 **Common causes**:
+
 1. **localStorage blocked** - Check browser privacy settings
 2. **Storage key conflicts** - Ensure unique `storageKey` in config
 3. **Incognito/private mode** - localStorage disabled in private browsing
 
 **Solutions**:
+
 ```tsx
 // Check if localStorage is available
-if (typeof window !== 'undefined' && window.localStorage) {
-	console.log('Theme stored:', localStorage.getItem('hiring-assistant-theme'));
+if (typeof window !== "undefined" && window.localStorage) {
+	console.log("Theme stored:", localStorage.getItem("hiring-assistant-theme"));
 }
 
 // Use different storage key if conflicts exist
 export const themeConfig = {
-	storageKey: 'my-unique-app-theme', // Change this
+	storageKey: "my-unique-app-theme", // Change this
 	// ... other config
 };
 ```
@@ -410,7 +429,9 @@ export const themeConfig = {
 **Problem**: Flash of wrong theme during page load
 
 **Solutions**:
+
 1. **Ensure suppressHydrationWarning** in html tag:
+
 ```tsx
 <html lang="en" suppressHydrationWarning>
 ```
@@ -423,7 +444,9 @@ export const themeConfig = {
 **Problem**: Components don't reflect theme changes
 
 **Solutions**:
+
 1. **Use CSS custom properties** correctly:
+
 ```css
 /* ✅ CORRECT */
 .my-component {
@@ -445,9 +468,11 @@ export const themeConfig = {
 **Problem**: System theme option doesn't respond to OS changes
 
 **Solutions**:
+
 1. **Verify enableSystem is true** in theme config
 2. **Check browser support** for `prefers-color-scheme`
 3. **Test CSS media query**:
+
 ```css
 @media (prefers-color-scheme: dark) {
 	/* This should apply when OS is in dark mode */
@@ -459,6 +484,7 @@ export const themeConfig = {
 **Problem**: Theme switching feels sluggish
 
 **Performance optimizations**:
+
 ```tsx
 // Disable transitions for better performance
 <ThemeProvider disableTransitionOnChange={true}>
@@ -474,9 +500,10 @@ body {
 **Problem**: Type errors with theme values
 
 **Solutions**:
+
 ```tsx
 // Import proper types
-import type { ThemeMode } from '@/lib/theme-config';
+import type { ThemeMode } from "@/lib/theme-config";
 
 // Type-safe theme setting
 const setTheme = (newTheme: ThemeMode) => {
@@ -489,6 +516,7 @@ const setTheme = (newTheme: ThemeMode) => {
 **Problem**: Themes work in development but not production
 
 **Checklist**:
+
 1. **Build optimization** - Ensure CSS variables aren't being purged
 2. **Environment variables** - Check if any theme config depends on env vars
 3. **CSP headers** - Content Security Policy might block inline styles
@@ -514,6 +542,7 @@ src/
 ## Best Practices Summary
 
 ### Do's ✅
+
 - Always check `mounted` state before rendering theme-dependent content
 - Use CSS custom properties for all theme-aware styles
 - Test theme switching in both development and production builds
@@ -522,6 +551,7 @@ src/
 - Implement loading states to prevent hydration issues
 
 ### Don'ts ❌
+
 - Don't use hard-coded color values in components
 - Don't access theme state on server-side or during initial render
 - Don't forget `suppressHydrationWarning` on the html element

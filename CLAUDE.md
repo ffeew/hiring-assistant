@@ -42,7 +42,10 @@ This is a **Next.js 15 hiring assistant application** that automates resume proc
 
 - `src/app/api/email/email.service.ts` - Nodemailer integration with Gmail SMTP
 - Two template types: acknowledgment and screening emails in `src/app/api/email/templates/`
-- Company branding support via environment variables
+- **Optional Configuration**: Users can sign up without Gmail setup, configure later in profile
+- **Validation Methods**: `EmailService.hasCompleteConfiguration()` and `EmailService.validateConfiguration()`
+- **Enhanced Error Messages**: Clear guidance on missing configuration with actionable next steps
+- Company branding support via user profile settings
 - Bulk email sending with 1-second rate limiting to avoid Gmail throttling
 - Email preview functionality before sending
 
@@ -208,10 +211,39 @@ All API routes follow the validator/service/controller pattern:
 - `/api/resumes` - Resume file management (GET, POST) with `resumes.validator.ts` & `resumes.service.ts`
 - `/api/resumes/[id]` - Individual resume file operations (GET, PUT, DELETE)
 - `/api/profile` - User profile management (GET, PATCH) with `profile.validator.ts` & `profile.service.ts`
+  - Handles optional Gmail configuration during signup and profile updates
+  - Supports clearing email configuration (both fields must be provided or both must be empty)
+  - Encrypts Gmail app passwords using AES-256-GCM before storage
 - `/api/email` - Bulk email sending with `email.validator.ts` & existing `email.service.ts`
 - `/api/email/preview` - Email template preview generation
 - `/api/extract` - Resume data extraction with authentication and existing service layer
 - `/api/auth/[...all]` - Better Auth endpoints for login/signup
+
+### Profile Management System
+
+The profile management system provides comprehensive user account settings with a focus on optional email configuration:
+
+**Key Components:**
+
+- **Profile Page** (`/app/profile/page.tsx`) - Main profile management interface with dashboard layout
+- **Profile Content** (`/app/profile/profile-page-content.tsx`) - Comprehensive profile display and management
+- **Profile Settings Modal** (`/app/components/profile-settings-modal.tsx`) - Modal for editing profile details
+- **API Integration** - Uses `useProfileQuery()` and `useUpdateProfileMutation()` for data management
+
+**Features:**
+
+- **Optional Email Configuration**: Users can sign up without Gmail setup and configure later
+- **Visual Status Indicators**: Clear badges showing email configuration status (Configured/Not Configured)
+- **Account Security Display**: Shows encryption status and secure password storage indicators
+- **Responsive Design**: Mobile-friendly layout with progressive disclosure
+- **Integration**: Seamless integration with existing ProfileSettingsModal for editing
+
+**Architecture Patterns:**
+
+- **Data Fetching**: TanStack Query with `useProfileQuery()` for server state management
+- **Form Handling**: React Hook Form with Zod validation for profile updates
+- **Error Handling**: Graceful handling of missing data with proper fallbacks
+- **Type Safety**: Proper type conversion between API responses and UI components
 
 ## Development Guidelines
 
@@ -318,9 +350,7 @@ const metadata = safeParseJSONObject(applicant.metadata, applicantMetadataSchema
 
 **Hook Structure (MANDATORY PATTERN):**
 ```typescript
-// Each query file must follow this pattern
-"use client";
-
+// Each query file must follow this pattern (.ts files, no "use client" directive needed)
 import { useQuery } from "@tanstack/react-query";
 
 interface DataType {

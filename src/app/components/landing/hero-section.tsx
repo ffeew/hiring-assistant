@@ -62,7 +62,7 @@ export function HeroSection() {
 					</Button>
 				</Link>
 				<a
-					href="https://github.com/ffeew/hiring-assistant"
+					href="#"
 					target="_blank"
 					rel="noopener noreferrer"
 				>

@@ -8,7 +8,8 @@ import {
 	Mail, 
 	Video,
 	Database,
-	Shield
+	Shield,
+	User
 } from "lucide-react";
 
 const features = [
@@ -51,14 +52,26 @@ const features = [
 	{
 		icon: Mail,
 		title: "Automated Communication",
-		description: "Send personalized emails with professional templates and tracking",
+		description: "Optional email setup with personalized templates and smart validation",
 		features: [
+			"Optional Gmail configuration",
 			"Multiple email templates",
 			"Bulk sending with rate limiting",
-			"Gmail SMTP integration",
-			"Delivery tracking"
+			"Smart validation & error guidance"
 		],
-		badge: "Template-based"
+		badge: "Flexible Setup"
+	},
+	{
+		icon: User,
+		title: "Profile Management",
+		description: "Comprehensive account settings with optional email configuration",
+		features: [
+			"Flexible onboarding flow",
+			"Optional Gmail setup",
+			"Account security overview",
+			"Visual status indicators"
+		],
+		badge: "User-Friendly"
 	},
 	{
 		icon: Database,

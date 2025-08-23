@@ -53,6 +53,8 @@ The codebase reflects its origins as a personal tool: it works well for my speci
   - **Screening**: Detailed follow-up with technical and availability questions
   - **Interview**: Interview scheduling and preparation emails
   - **Rejection/Offer**: Status update communications
+- **Optional Setup**: Sign up without Gmail configuration, set up email later when needed
+- **Configuration Validation**: Smart validation with helpful error messages and setup guidance
 - **Email Preview System**: Preview all emails with actual recipient data before sending
 - **Bulk Email Operations**: Send personalized emails to filtered candidate groups
 - **Gmail Integration**: Secure SMTP support with encrypted app password storage
@@ -87,6 +89,15 @@ The codebase reflects its origins as a personal tool: it works well for my speci
 - **Soft Delete**: Recoverable deletion system for candidates, job posts, and resumes
 - **Audit Trail**: Complete activity logging for compliance and tracking
 - **Data Export**: Export candidate data and reports in various formats
+
+### 👤 Profile & Account Management
+
+- **Comprehensive Profile Page**: Complete user account management interface
+- **Optional Email Configuration**: Sign up without Gmail setup, configure later in profile settings
+- **Visual Status Indicators**: Clear badges showing email configuration and account status
+- **Account Security Overview**: View encryption status and data security measures
+- **Profile Settings Modal**: Easy-to-use interface for updating account details
+- **Progressive Setup**: Guided setup process for email functionality when needed
 
 ### 🔐 Security & Authentication
 
@@ -197,7 +208,7 @@ The codebase reflects its origins as a personal tool: it works well for my speci
    cp .env.example .env.local
    ```
 
-   See [docs/ENVIRONMENT_SETUP.md](docs/ENVIRONMENT_SETUP.md) for detailed configuration instructions.
+   See **[Environment Setup Guide](docs/ENVIRONMENT_SETUP.md)** for detailed configuration instructions.
 
 4. **Run the development server**
 
@@ -251,11 +262,13 @@ The codebase reflects its origins as a personal tool: it works well for my speci
 - **Core Resume Processing Pipeline**: Full end-to-end resume upload and AI-powered data extraction
 - **Database Architecture**: Complete Drizzle ORM setup with normalized schema and relationships  
 - **AI Integration**: Mistral AI for resume parsing and Groq AI for interview questions
-- **Email System**: Multi-template email service with preview and bulk sending capabilities
-- **Authentication Flow**: Secure user registration, login, and session management
+- **Email System**: Multi-template email service with optional setup and bulk sending capabilities
+- **Profile Management**: Comprehensive user account settings with optional email configuration
+- **Authentication Flow**: Secure user registration, login, and session management with flexible onboarding
 - **Live Interview Features**: Real-time speech recognition and dynamic question generation
 - **Modern UI Foundation**: Responsive design with shadcn/ui components and theme support
 - **Security Infrastructure**: Data encryption, secure file storage, and user isolation
+- **UI/UX Improvements**: Dark mode optimizations, improved contrast, and better component alignment
 
 ### 🚧 In Active Development
 
@@ -422,8 +435,10 @@ This project is for personal/internal use. Please ensure compliance with any thi
 
 For setup issues or questions, refer to:
 
-- [Environment Setup Guide](docs/ENVIRONMENT_SETUP.md)
-- [Theme System Documentation](src/app/docs/THEME_SYSTEM.md)
+- **[Environment Setup Guide](docs/ENVIRONMENT_SETUP.md)** - Complete setup instructions with optional Gmail configuration
+- **[Theme System Documentation](src/app/docs/THEME_SYSTEM.md)** - Comprehensive theme system guide and troubleshooting
+- **CLAUDE.md** - Development guidelines and architecture documentation
+- **GitHub Issues** - Report bugs or request features
 
 ---
 
