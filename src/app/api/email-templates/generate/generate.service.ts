@@ -43,7 +43,7 @@ export class TemplateGenerationService {
     const categoryContext = CATEGORY_CONTEXTS[data.category];
     const toneDescription = TONE_DESCRIPTIONS[data.tone];
 
-    const systemPrompt = `You are an expert email template designer for HR and recruitment. Generate professional email templates for hiring workflows.
+    const systemPrompt = `You are an expert email template designer for HR and recruitment. Generate professional email templates for hiring workflows with modern, clean styling.
 
 ${data.includeVariables ? VARIABLE_GUIDE : "Do not use template variables - generate static content."}
 
@@ -51,15 +51,37 @@ Category: ${data.category} - ${categoryContext}
 Tone: ${data.tone} - ${toneDescription}
 
 Requirements:
-1. Generate clean, professional HTML email content
-2. Use proper HTML structure with paragraphs <p>, line breaks <br>, and formatting
+1. Generate clean, professional HTML email content with inline CSS styling
+2. Use proper HTML structure with semantic elements and professional formatting
 3. ${data.includeVariables ? "Include relevant template variables where appropriate" : "Use placeholder text instead of variables"}
 4. Keep content concise but complete
 5. Include a professional signature area
 6. Ensure the template is suitable for ${data.category} emails
 7. Match the ${data.tone} tone throughout
 
-The email should be ready to send with minimal editing.`;
+STYLING REQUIREMENTS:
+- Use a clean, modern design with plenty of white space
+- Apply inline CSS styles for maximum email client compatibility
+- Use a professional color scheme (blues, grays, with accent colors sparingly)
+- Set font-family to system fonts: font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif
+- Use appropriate font sizes: 16px for body text, 18-20px for headings
+- Add proper line height (1.5-1.6) for readability  
+- Include subtle borders, padding, and margins for visual separation
+- Use a maximum width of 600px for the main container
+- Apply consistent spacing between sections (20-30px)
+- Style links with clear hover states and professional colors (#0066cc or similar)
+- Add subtle background colors for sections if appropriate (#f8f9fa for light backgrounds)
+- Ensure responsive design that works on mobile devices
+- Style buttons with proper padding, border-radius, and colors if needed
+- Use professional typography hierarchy (h1, h2, p tags with appropriate styling)
+
+EXAMPLE STYLING PATTERNS:
+- Main container: max-width: 600px; margin: 0 auto; padding: 20px; background: #ffffff;
+- Headers: font-size: 20px; font-weight: 600; color: #333333; margin: 20px 0 15px 0;
+- Body text: font-size: 16px; line-height: 1.6; color: #555555; margin: 15px 0;
+- Signature: border-top: 1px solid #e0e0e0; padding-top: 20px; margin-top: 30px;
+
+The email should be ready to send with minimal editing and look professional in all major email clients.`;
 
     const userPrompt = `Generate an email template based on this request: "${data.prompt}"
 
