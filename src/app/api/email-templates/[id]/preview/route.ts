@@ -15,8 +15,8 @@ async function previewEmailTemplate(
     const template = await EmailTemplatesService.getTemplate(request.user.id, validatedParams.id);
 
     // Generate preview with sample data
-    const previewContent = TemplateEngine.createPreview(template.content, template.variables);
-    const previewSubject = TemplateEngine.createPreview(template.subject, template.variables);
+    const previewContent = TemplateEngine.createPreview(template.content);
+    const previewSubject = TemplateEngine.createPreview(template.subject);
 
     return NextResponse.json({
       success: true,

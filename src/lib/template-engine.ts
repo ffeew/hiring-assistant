@@ -75,7 +75,7 @@ export interface TemplateContext {
   senderTitle?: string;
   currentDate?: Date;
   interviewDate?: Date;
-  [key: string]: any;
+  [key: string]: string | Date | number | boolean | undefined;
 }
 
 export class TemplateEngine {
@@ -119,7 +119,7 @@ export class TemplateEngine {
     });
 
     // Handle simple conditional blocks {{#if variable}} content {{/if}}
-    rendered = rendered.replace(/\{\{#if\s+([^}]+)\}\}([\s\S]*?)\{\{\/if\}\}/g, (match, condition, content) => {
+    rendered = rendered.replace(/\{\{#if\s+([^}]+)\}\}([\s\S]*?)\{\{\/if\}\}/g, (_, condition, content) => {
       const key = condition.trim();
       const value = context[key];
       
@@ -174,7 +174,7 @@ export class TemplateEngine {
   /**
    * Creates template preview with sample data
    */
-  static createPreview(template: string, variables: TemplateVariable[]): string {
+  static createPreview(template: string): string {
     const sampleContext: TemplateContext = {
       firstName: "John",
       lastName: "Doe",

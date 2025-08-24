@@ -4,15 +4,13 @@ import { withTransaction } from '@/lib/db/transaction';
 import { notDeleted, softDeleteData } from '@/lib/soft-delete';
 import { safeParseJSONArray } from '@/lib/json-utils';
 import { randomUUID } from 'node:crypto';
-import { eq, and, desc, asc, like, count, sql } from 'drizzle-orm';
-import { z } from 'zod';
+import { eq, and, desc, like, count, sql } from 'drizzle-orm';
 import {
   GetEmailTemplatesQuery,
   CreateEmailTemplateBody,
   UpdateEmailTemplateBody,
   DuplicateEmailTemplateBody,
   EmailTemplateResponse,
-  TemplateVariable,
   templateVariableSchema
 } from './email-templates.validator';
 import { DEFAULT_TEMPLATE_VARIABLES, TemplateEngine } from '@/lib/template-engine';
@@ -64,8 +62,13 @@ export class EmailTemplatesService {
     // Parse JSON variables and format response
     const data: EmailTemplateResponse[] = templates.map(template => ({
       ...template,
-      category: template.category as any, // Cast to satisfy type checker
-      variables: safeParseJSONArray(template.variables, templateVariableSchema) as any, // Cast to satisfy type checker
+      category: template.category as EmailTemplateResponse['category'],
+      variables: safeParseJSONArray(template.variables, templateVariableSchema).map(v => ({
+        name: v.name,
+        description: v.description,
+        required: v.required ?? false,
+        type: v.type ?? 'string' as const
+      })),
       deletedAt: template.deletedAt || null
     }));
 
@@ -96,8 +99,13 @@ export class EmailTemplatesService {
 
     return {
       ...template[0],
-      category: template[0].category as any, // Cast to satisfy type checker
-      variables: safeParseJSONArray(template[0].variables, templateVariableSchema) as any, // Cast to satisfy type checker
+      category: template[0].category as EmailTemplateResponse['category'],
+      variables: safeParseJSONArray(template[0].variables, templateVariableSchema).map(v => ({
+        name: v.name,
+        description: v.description,
+        required: v.required ?? false,
+        type: v.type ?? 'string' as const
+      })),
       deletedAt: template[0].deletedAt || null
     };
   }
@@ -163,8 +171,13 @@ export class EmailTemplatesService {
 
     return {
       ...newTemplate,
-      category: newTemplate.category as any, // Cast to satisfy type checker
-      variables: safeParseJSONArray(newTemplate.variables, templateVariableSchema) as any, // Cast to satisfy type checker
+      category: newTemplate.category as EmailTemplateResponse['category'],
+      variables: safeParseJSONArray(newTemplate.variables, templateVariableSchema).map(v => ({
+        name: v.name,
+        description: v.description,
+        required: v.required ?? false,
+        type: v.type ?? 'string' as const
+      })),
       deletedAt: null
     };
   }
@@ -232,8 +245,13 @@ export class EmailTemplatesService {
 
     return {
       ...updatedTemplate,
-      category: updatedTemplate.category as any, // Cast to satisfy type checker
-      variables: safeParseJSONArray(updatedTemplate.variables, templateVariableSchema) as any, // Cast to satisfy type checker
+      category: updatedTemplate.category as EmailTemplateResponse['category'],
+      variables: safeParseJSONArray(updatedTemplate.variables, templateVariableSchema).map(v => ({
+        name: v.name,
+        description: v.description,
+        required: v.required ?? false,
+        type: v.type ?? 'string' as const
+      })),
       deletedAt: updatedTemplate.deletedAt || null
     };
   }
@@ -265,7 +283,8 @@ export class EmailTemplatesService {
    * Delete an email template (soft delete)
    */
   static async deleteTemplate(userId: string, templateId: string): Promise<void> {
-    const existing = await this.getTemplate(userId, templateId);
+    // Verify template exists and belongs to user
+    await this.getTemplate(userId, templateId);
 
     await withTransaction(async (tx) => {
       await tx
@@ -326,8 +345,13 @@ export class EmailTemplatesService {
 
     return {
       ...templates[0],
-      category: templates[0].category as any, // Cast to satisfy type checker
-      variables: safeParseJSONArray(templates[0].variables, templateVariableSchema) as any, // Cast to satisfy type checker
+      category: templates[0].category as EmailTemplateResponse['category'],
+      variables: safeParseJSONArray(templates[0].variables, templateVariableSchema).map(v => ({
+        name: v.name,
+        description: v.description,
+        required: v.required ?? false,
+        type: v.type ?? 'string' as const
+      })),
       deletedAt: templates[0].deletedAt || null
     };
   }

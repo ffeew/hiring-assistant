@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { ArrowLeft, Save, Eye, Info, X, Sparkles, ChevronDown, ChevronUp } from 'lucide-react';
+import { ArrowLeft, Save, Eye, Info, Sparkles, ChevronDown, ChevronUp } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -576,13 +576,13 @@ You can use HTML for formatting and variables for personalization.`}
 
                     {/* Email Body Preview */}
                     <div className="border rounded-lg overflow-hidden">
-                      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 px-3 py-2 border-b">
+                      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30 px-3 py-2 border-b">
                         <div className="text-xs text-muted-foreground">Email Content:</div>
                       </div>
-                      <div className="p-4 bg-white min-h-[200px] max-h-[400px] overflow-y-auto">
+                      <div className="p-4 bg-background border border-border/50 min-h-[200px] max-h-[400px] overflow-y-auto">
                         {previewHtml ? (
                           <div 
-                            className="prose prose-sm max-w-none"
+                            className="prose prose-sm max-w-none prose-headings:text-foreground prose-p:text-foreground prose-strong:text-foreground prose-em:text-foreground prose-a:text-primary dark:prose-invert"
                             dangerouslySetInnerHTML={{ __html: previewHtml }}
                           />
                         ) : (
@@ -594,7 +594,7 @@ You can use HTML for formatting and variables for personalization.`}
                     </div>
 
                     {/* Sample Data Notice */}
-                    <div className="text-xs text-muted-foreground bg-blue-50 p-2 rounded">
+                    <div className="text-xs text-muted-foreground bg-blue-50 dark:bg-blue-950/30 p-2 rounded">
                       <strong>Preview uses sample data:</strong> John Doe, john.doe@example.com, Your Company, etc.
                     </div>
                   </div>

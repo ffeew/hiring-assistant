@@ -53,6 +53,16 @@ The codebase reflects its origins as a personal tool: it works well for my speci
   - **Screening**: Detailed follow-up with technical and availability questions
   - **Interview**: Interview scheduling and preparation emails
   - **Rejection/Offer**: Status update communications
+- **AI-Powered Template Generation**: Create professional email templates using natural language prompts
+  - **Smart Content Creation**: Describe what you want and AI generates the complete template
+  - **Multiple Tones**: Choose from professional, friendly, formal, or casual writing styles
+  - **Variable Integration**: Automatically includes dynamic variables like `{{firstName}}`, `{{jobPosition}}`
+  - **Category-Aware**: AI understands context for different email types (acknowledgment, screening, etc.)
+  - **User-Friendly**: No HTML knowledge required - perfect for non-technical users
+- **Template Management System**: Create, edit, and organize custom email templates
+  - **Template Editor**: Rich editor with live preview and variable insertion
+  - **Template Library**: Save and reuse templates across different hiring campaigns
+  - **Default Templates**: Mark frequently used templates as defaults for quick access
 - **Optional Setup**: Sign up without Gmail configuration, set up email later when needed
 - **Configuration Validation**: Smart validation with helpful error messages and setup guidance
 - **Email Preview System**: Preview all emails with actual recipient data before sending
@@ -140,6 +150,7 @@ The codebase reflects its origins as a personal tool: it works well for my speci
 ### AI & Machine Learning
 - **Resume Parsing**: Mistral AI for structured data extraction from PDFs/DOCX
 - **Interview Assistant**: Groq AI SDK for real-time question generation
+- **Email Template Generation**: Groq AI (GPT OSS 120B) for creating professional email templates from natural language prompts
 - **Speech Recognition**: Browser Web Speech API for live transcription
 - **Content Analysis**: AI-powered conversation analysis and summarization
 
@@ -262,7 +273,7 @@ The codebase reflects its origins as a personal tool: it works well for my speci
 - **Core Resume Processing Pipeline**: Full end-to-end resume upload and AI-powered data extraction
 - **Database Architecture**: Complete Drizzle ORM setup with normalized schema and relationships  
 - **AI Integration**: Mistral AI for resume parsing and Groq AI for interview questions
-- **Email System**: Multi-template email service with optional setup and bulk sending capabilities
+- **Email System**: AI-powered template generation, multi-template service with optional setup and bulk sending capabilities
 - **Profile Management**: Comprehensive user account settings with optional email configuration
 - **Authentication Flow**: Secure user registration, login, and session management with flexible onboarding
 - **Live Interview Features**: Real-time speech recognition and dynamic question generation
@@ -386,6 +397,7 @@ src/
 │   │   ├── job-posts/           # Job posting management
 │   │   ├── resumes/             # Resume file operations
 │   │   ├── email/               # Email communication system
+│   │   ├── email-templates/     # Email template management and AI generation
 │   │   ├── extract/             # AI resume data extraction
 │   │   ├── interview-assistant/ # AI question generation
 │   │   ├── interview-sessions/  # Live interview management

@@ -33,7 +33,7 @@ const CATEGORY_CONTEXTS = {
 
 const TONE_DESCRIPTIONS = {
   professional: "Professional and business-like tone",
-  friendly: "Warm and approachable tone while maintaining professionalism", 
+  friendly: "Warm and approachable tone while maintaining professionalism",
   formal: "Very formal and traditional business communication",
   casual: "Relaxed and conversational tone",
 };
@@ -42,7 +42,7 @@ export class TemplateGenerationService {
   static async generateTemplate(data: GenerateTemplateBody) {
     const categoryContext = CATEGORY_CONTEXTS[data.category];
     const toneDescription = TONE_DESCRIPTIONS[data.tone];
-    
+
     const systemPrompt = `You are an expert email template designer for HR and recruitment. Generate professional email templates for hiring workflows.
 
 ${data.includeVariables ? VARIABLE_GUIDE : "Do not use template variables - generate static content."}
@@ -67,7 +67,7 @@ Make sure the template fits the ${data.category} category and uses a ${data.tone
 
     try {
       const result = await generateObject({
-        model: groq("llama-3.1-8b-instant"),
+        model: groq("openai/gpt-oss-120b"),
         schema: generatedTemplateSchema,
         system: systemPrompt,
         prompt: userPrompt,

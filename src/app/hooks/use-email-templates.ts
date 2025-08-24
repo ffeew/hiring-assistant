@@ -5,6 +5,7 @@ import {
   UpdateEmailTemplateData,
   TemplateCategory 
 } from "../types";
+import type { TemplateVariable } from "../api/email-templates/email-templates.validator";
 
 interface EmailTemplatesQuery {
   category?: TemplateCategory;
@@ -38,7 +39,7 @@ interface EmailTemplatePreviewResponse {
     category: TemplateCategory;
     subject: string;
     content: string;
-    variables: any[];
+    variables: TemplateVariable[];
   };
 }
 
@@ -191,14 +192,16 @@ export function useDuplicateEmailTemplate() {
   });
 }
 
-// Utility functions for query invalidation
-export function invalidateEmailTemplates() {
+// Custom hooks for query invalidation
+export function useInvalidateEmailTemplates() {
   const queryClient = useQueryClient();
-  return queryClient.invalidateQueries({ queryKey: ["email-templates"] });
+  return () => queryClient.invalidateQueries({ queryKey: ["email-templates"] });
 }
 
-export function invalidateEmailTemplate(id: string) {
+export function useInvalidateEmailTemplate() {
   const queryClient = useQueryClient();
-  queryClient.invalidateQueries({ queryKey: ["email-template", id] });
-  queryClient.invalidateQueries({ queryKey: ["email-template-preview", id] });
+  return (id: string) => {
+    queryClient.invalidateQueries({ queryKey: ["email-template", id] });
+    queryClient.invalidateQueries({ queryKey: ["email-template-preview", id] });
+  };
 }

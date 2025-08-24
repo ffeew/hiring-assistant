@@ -220,9 +220,9 @@ export function EmailTemplatePreview({ template, onClose, onEdit }: EmailTemplat
 
                     <div className="border rounded-lg overflow-hidden">
                       {/* Preview container with email styling */}
-                      <div className="bg-white p-6 min-h-[400px]">
+                      <div className="bg-background border border-border/50 p-6 min-h-[400px]">
                         <div 
-                          className="prose prose-sm max-w-none"
+                          className="prose prose-sm max-w-none prose-headings:text-foreground prose-p:text-foreground prose-strong:text-foreground prose-em:text-foreground prose-a:text-primary dark:prose-invert"
                           dangerouslySetInnerHTML={{ __html: previewData.data.content }}
                         />
                       </div>

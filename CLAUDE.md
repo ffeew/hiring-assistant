@@ -49,6 +49,21 @@ This is a **Next.js 15 hiring assistant application** that automates resume proc
 - Bulk email sending with 1-second rate limiting to avoid Gmail throttling
 - Email preview functionality before sending
 
+**AI-Powered Email Template System**
+
+- `src/app/api/email-templates/` - Complete CRUD operations for email templates following 3-layer architecture
+- `src/app/api/email-templates/generate/` - AI template generation endpoint using Groq AI (GPT OSS 120B)
+- `src/lib/db/schema.ts` - EmailTemplate table with comprehensive fields (name, category, subject, content, variables, etc.)
+- **Template Management**: Full lifecycle management with create, read, update, delete, duplicate operations
+- **AI Generation Service**: `TemplateGenerationService` for natural language to professional email template conversion
+- **Category-Aware Generation**: Context-specific templates for acknowledgment, screening, interview, offer, rejection, follow_up
+- **Multiple Tone Support**: Professional, friendly, formal, and casual writing styles
+- **Variable Integration**: Automatic inclusion of dynamic variables like {{firstName}}, {{jobPosition}}, {{companyName}}
+- **Template Editor**: Rich editing interface with live preview and click-to-insert variables
+- **Template Variables**: Predefined variable system with descriptions and validation
+- **Usage Tracking**: Template usage statistics and last updated timestamps
+- **Default Template System**: Mark templates as defaults for quick selection
+
 **Job Posts Management System**
 
 - `src/lib/db/schema.ts` - Job post table with comprehensive fields (title, description, requirements, etc.)
@@ -197,8 +212,10 @@ async function createExample(request: AuthenticatedRequest) {
 
 - **Mistral AI**: OCR for resume parsing with structured output via Zod schemas
 - **Groq AI**: Interview assistant for generating screening questions (`@ai-sdk/groq`)
+- **Groq AI (Template Generation)**: GPT OSS 120B model for professional email template creation from natural language prompts
 - **Type-Safe AI Responses**: All AI outputs validated with Zod schemas before processing
 - **File Processing**: Supports PDF (base64) and DOCX (file upload) with type validation
+- **Structured Template Generation**: AI generates name, subject, and HTML content with proper variable integration
 
 ### API Routes Structure
 
@@ -216,6 +233,11 @@ All API routes follow the validator/service/controller pattern:
   - Encrypts Gmail app passwords using AES-256-GCM before storage
 - `/api/email` - Bulk email sending with `email.validator.ts` & existing `email.service.ts`
 - `/api/email/preview` - Email template preview generation
+- `/api/email-templates` - Email template management (GET, POST) with `email-templates.validator.ts` & `email-templates.service.ts`
+- `/api/email-templates/[id]` - Individual template operations (GET, PUT, DELETE)
+- `/api/email-templates/[id]/preview` - Template preview with sample data
+- `/api/email-templates/[id]/duplicate` - Template duplication functionality
+- `/api/email-templates/generate` - AI-powered template generation using natural language prompts
 - `/api/extract` - Resume data extraction with authentication and existing service layer
 - `/api/auth/[...all]` - Better Auth endpoints for login/signup
 
