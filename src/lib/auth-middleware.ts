@@ -19,6 +19,10 @@ export type AuthenticatedParamsHandler = (
   context: { params: Promise<Record<string, string>>; }
 ) => Promise<NextResponse>;
 
+export interface AuthenticatedRequestWithParams extends AuthenticatedRequest {
+  params: Record<string, string>;
+}
+
 /**
  * Higher-order function that wraps API route handlers with authentication (no params)
  */

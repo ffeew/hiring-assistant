@@ -16,6 +16,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Video,
+  Mail,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -73,6 +74,12 @@ const navigationSections: NavigationSection[] = [
         href: "/resumes",
         icon: Users,
         description: "View candidates and their resumes",
+      },
+      {
+        name: "Email Templates",
+        href: "/email-templates",
+        icon: Mail,
+        description: "Create and manage email templates",
       },
     ],
   },

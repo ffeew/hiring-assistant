@@ -227,3 +227,31 @@ export const conversationTurn = sqliteTable("conversation_turn", {
     .$defaultFn(() => new Date())
     .notNull(),
 });
+
+export const emailTemplate = sqliteTable("email_template", {
+  id: text("id").primaryKey(),
+  userId: text("user_id")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  category: text("category").notNull(), // acknowledgment, screening, interview, offer, rejection, follow_up
+  subject: text("subject").notNull(),
+  content: text("content").notNull(), // HTML content with template variables
+  variables: text("variables"), // JSON array of available variables for this template
+  isDefault: integer("is_default", { mode: "boolean" })
+    .$defaultFn(() => false)
+    .notNull(),
+  isActive: integer("is_active", { mode: "boolean" })
+    .$defaultFn(() => true)
+    .notNull(),
+  usageCount: integer("usage_count")
+    .$defaultFn(() => 0)
+    .notNull(),
+  createdAt: integer("created_at", { mode: "timestamp" })
+    .$defaultFn(() => new Date())
+    .notNull(),
+  updatedAt: integer("updated_at", { mode: "timestamp" })
+    .$defaultFn(() => new Date())
+    .notNull(),
+  deletedAt: integer("deleted_at", { mode: "timestamp" }),
+});

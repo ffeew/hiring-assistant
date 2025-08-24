@@ -34,6 +34,13 @@ export type { CreateJobPostBody as CreateJobPostData, UpdateJobPostBody as Updat
 export type { UpdateProfileBody as ProfileUpdateData } from '@/app/api/profile/profile.validator';
 export type { SendEmailsBody as EmailRequestData, EmailPreviewBody as EmailPreviewRequestData } from '@/app/api/email/email.validator';
 export type { MistralExtractionData, ResumeExtractionData, ExtractionResponseData, SuccessfulExtractionData } from '@/app/api/extract/extract.validator';
+export type { 
+  CreateEmailTemplateBody as CreateEmailTemplateData, 
+  UpdateEmailTemplateBody as UpdateEmailTemplateData,
+  EmailTemplateResponse as EmailTemplateData,
+  TemplateVariable,
+  TemplateCategory
+} from '@/app/api/email-templates/email-templates.validator';
 
 // Profile response schema (not used in validation, only for API responses)
 export const profileResponseSchema = z.object({
