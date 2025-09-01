@@ -73,7 +73,7 @@ export function generateScreeningTemplate(recipient: EmailData, userConfig: User
         
         <div class="section">
           <h3>📅 Duration Commitment (Critical)</h3>
-          <p>Our internship is a <strong>full-time, 6-12 month commitment starting August 2025</strong>.</p>
+          <p>Our internship is a <strong>full-time, 6-12 month commitment starting Sep/Oct 2025</strong>.</p>
           <div class="question-list">
             <ul>
               <li>Can you confirm your availability for the entire duration of this internship?</li>
