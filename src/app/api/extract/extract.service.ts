@@ -431,7 +431,6 @@ IMPORTANT:
           documentUrl: "data:application/pdf;base64," + base64File,
         },
         documentAnnotationFormat: annotationFormat,
-        includeImageBase64: true,
       });
     } catch (error) {
       console.error("Error processing PDF file:", error);
@@ -459,7 +458,6 @@ IMPORTANT:
           documentUrl: signedUrl.url,
         },
         documentAnnotationFormat: annotationFormat,
-        includeImageBase64: true
       });
 
       // delete the uploaded file after processing
@@ -484,7 +482,6 @@ IMPORTANT:
           type: "document_url",
           documentUrl: "data:application/pdf;base64," + base64File,
         },
-        includeImageBase64: false,
       });
     } catch (error) {
       console.error("Error processing PDF file:", error);
@@ -511,7 +508,6 @@ IMPORTANT:
           type: "document_url",
           documentUrl: signedUrl.url,
         },
-        includeImageBase64: false
       });
 
       // delete the uploaded file after processing
