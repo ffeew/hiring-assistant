@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -97,8 +97,26 @@ export function EmailTemplateEditor({ template, onClose, onSave }: EmailTemplate
     },
   });
 
+  // Extract email body content from full HTML document
+  const extractEmailBodyContent = (htmlContent: string): string => {
+    // If it's a complete HTML document, extract only the body content
+    const bodyMatch = htmlContent.match(/<body[^>]*>([\s\S]*)<\/body>/i);
+    if (bodyMatch) {
+      return bodyMatch[1];
+    }
+    
+    // If it has head/style tags but no body, remove them
+    let cleanContent = htmlContent;
+    cleanContent = cleanContent.replace(/<html[^>]*>|<\/html>/gi, '');
+    cleanContent = cleanContent.replace(/<head[^>]*>[\s\S]*?<\/head>/gi, '');
+    cleanContent = cleanContent.replace(/<!DOCTYPE[^>]*>/gi, '');
+    cleanContent = cleanContent.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '');
+    
+    return cleanContent.trim();
+  };
+
   // Generate preview HTML
-  const generatePreview = (content: string) => {
+  const generatePreview = useCallback((content: string) => {
     // Simple preview with sample data
     const sampleData = {
       firstName: 'John',
@@ -112,7 +130,8 @@ export function EmailTemplateEditor({ template, onClose, onSave }: EmailTemplate
       currentDate: new Date().toLocaleDateString(),
     };
 
-    let preview = content;
+    // Extract only the body content (remove full HTML document structure)
+    let preview = extractEmailBodyContent(content);
     
     // Replace template variables
     Object.entries(sampleData).forEach(([key, value]) => {
@@ -121,7 +140,7 @@ export function EmailTemplateEditor({ template, onClose, onSave }: EmailTemplate
     });
 
     return preview;
-  };
+  }, []);
 
   // Update preview when content or subject changes
   useEffect(() => {
@@ -145,7 +164,7 @@ export function EmailTemplateEditor({ template, onClose, onSave }: EmailTemplate
     }
     
     return () => subscription.unsubscribe();
-  }, [form]);
+  }, [form, generatePreview]);
 
   const onSubmit = async (data: FormData) => {
     try {
@@ -582,8 +601,13 @@ You can use HTML for formatting and variables for personalization.`}
                       <div className="p-4 bg-background border border-border/50 min-h-[200px] max-h-[400px] overflow-y-auto">
                         {previewHtml ? (
                           <div 
-                            className="prose prose-sm max-w-none prose-headings:text-foreground prose-p:text-foreground prose-strong:text-foreground prose-em:text-foreground prose-a:text-primary dark:prose-invert"
+                            className="email-preview-container prose prose-sm max-w-none prose-headings:text-foreground prose-p:text-foreground prose-strong:text-foreground prose-em:text-foreground prose-a:text-primary dark:prose-invert"
                             dangerouslySetInnerHTML={{ __html: previewHtml }}
+                            style={{
+                              // CSS isolation to prevent email styles from affecting the parent app
+                              contain: 'layout style',
+                              isolation: 'isolate'
+                            }}
                           />
                         ) : (
                           <div className="text-muted-foreground italic">

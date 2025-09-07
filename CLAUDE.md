@@ -40,11 +40,15 @@ This is a **Next.js 15 hiring assistant application** that automates resume proc
 
 **Email Communication System**
 
-- `src/app/api/email/email.service.ts` - Nodemailer integration with Gmail SMTP
-- Two template types: acknowledgment and screening emails in `src/app/api/email/templates/`
+- `src/app/api/email/email.service.ts` - Nodemailer integration with Gmail SMTP, fully integrated with dynamic template system
+- **Dynamic Template System**: All emails use user-created database templates with AI-powered generation
+- **Default Template Selection**: `src/app/api/extract/template-selection.service.ts` uses default template or first available template
+- **Simple Template Assignment**: Templates are selected based on database defaults (isDefault: true) with first-template fallback
+- **Enhanced Template Variables**: 15+ dynamic variables from Mistral OCR extraction (skills, experience, education, links)
 - **Optional Configuration**: Users can sign up without Gmail setup, configure later in profile
 - **Validation Methods**: `EmailService.hasCompleteConfiguration()` and `EmailService.validateConfiguration()`
 - **Enhanced Error Messages**: Clear guidance on missing configuration with actionable next steps
+- **Template Requirement Validation**: System guides users to create templates before processing resumes
 - Company branding support via user profile settings
 - Bulk email sending with 1-second rate limiting to avoid Gmail throttling
 - Email preview functionality before sending
@@ -60,9 +64,11 @@ This is a **Next.js 15 hiring assistant application** that automates resume proc
 - **Multiple Tone Support**: Professional, friendly, formal, and casual writing styles
 - **Variable Integration**: Automatic inclusion of dynamic variables like {{firstName}}, {{jobPosition}}, {{companyName}}
 - **Template Editor**: Rich editing interface with live preview and click-to-insert variables
-- **Template Variables**: Predefined variable system with descriptions and validation
+- **Template Variables**: Predefined variable system with descriptions and validation, enhanced with Mistral OCR data
 - **Usage Tracking**: Template usage statistics and last updated timestamps
 - **Default Template System**: Mark templates as defaults for quick selection
+- **Template Engine Integration**: `src/lib/template-engine.ts` with 15+ template variables for personalized emails
+- **Candidate-Template Matching**: Intelligent template selection during resume processing based on candidate profiles
 
 **Job Posts Management System**
 
@@ -189,9 +195,11 @@ async function createExample(request: AuthenticatedRequest) {
 **State Management & UI Flow**
 
 - Custom hook `src/app/hooks/use-hiring-assistant.ts` orchestrates the entire hiring workflow
-- Manages file upload → data extraction → email preview → bulk sending pipeline
+- Manages file upload → data extraction → template validation → email preview → bulk sending pipeline
 - TanStack Query integration for job posts fetching with loading states
-- Template selection per candidate with default to SCREENING template
+- **Template Validation System**: Comprehensive validation with `hasTemplateIssues` and `extractionsWithoutTemplates` tracking
+- **User Guidance Integration**: Visual warnings and actionable guidance when templates are missing
+- **Template Selection Per Candidate**: Intelligent template assignment with manual override capability
 
 **Security Architecture**
 
@@ -217,6 +225,17 @@ async function createExample(request: AuthenticatedRequest) {
 - **File Processing**: Supports PDF (base64) and DOCX (file upload) with type validation
 - **Structured Template Generation**: AI generates name, subject, and HTML content with proper variable integration
 
+**Template Selection & Integration Architecture**
+
+- **Simple Template Selection**: `src/app/api/extract/template-selection.service.ts` uses database default templates for consistent assignment
+- **Default Template Priority**: Uses template marked with `isDefault: true` from user's active templates
+- **First Template Fallback**: When no default template exists, automatically uses the first available template
+- **Category-Based Fallback**: Falls back to category-specific defaults (screening, acknowledgment) when no templates available
+- **Enhanced Template Engine**: `src/lib/template-engine.ts` with 15+ template variables from Mistral OCR data
+- **Template Variables**: Professional links (LinkedIn, GitHub, portfolio), skills arrays, experience metrics, education formatting
+- **User Experience Integration**: Visual template validation with helpful guidance when templates missing
+- **Frontend Integration**: Real-time template validation in `use-hiring-assistant.ts` with error handling and user guidance
+
 ### API Routes Structure
 
 All API routes follow the validator/service/controller pattern:
@@ -231,14 +250,14 @@ All API routes follow the validator/service/controller pattern:
   - Handles optional Gmail configuration during signup and profile updates
   - Supports clearing email configuration (both fields must be provided or both must be empty)
   - Encrypts Gmail app passwords using AES-256-GCM before storage
-- `/api/email` - Bulk email sending with `email.validator.ts` & existing `email.service.ts`
-- `/api/email/preview` - Email template preview generation
+- `/api/email` - Bulk email sending with `email.validator.ts` & `email.service.ts` (fully integrated with template system)
+- `/api/email/preview` - Email template preview generation with dynamic template rendering
 - `/api/email-templates` - Email template management (GET, POST) with `email-templates.validator.ts` & `email-templates.service.ts`
 - `/api/email-templates/[id]` - Individual template operations (GET, PUT, DELETE)
 - `/api/email-templates/[id]/preview` - Template preview with sample data
 - `/api/email-templates/[id]/duplicate` - Template duplication functionality
 - `/api/email-templates/generate` - AI-powered template generation using natural language prompts
-- `/api/extract` - Resume data extraction with authentication and existing service layer
+- `/api/extract` - Resume data extraction with authentication, intelligent template selection, and enhanced candidate data integration
 - `/api/auth/[...all]` - Better Auth endpoints for login/signup
 
 ### Profile Management System

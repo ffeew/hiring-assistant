@@ -2,20 +2,21 @@
 
 import { useState } from "react";
 import { LoadingSpinner } from "./loading-spinner";
-import type { ExtractedData } from "../types";
-import { EmailTemplate } from "../types";
+import type { ExtractedData, EmailTemplateData } from "../types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle, XCircle, Mail, Eye, Send, AlertTriangle, FileText, Edit3 } from "lucide-react";
+import { CheckCircle, XCircle, Eye, Send, AlertTriangle, FileText, Edit3 } from "lucide-react";
 
 type ResultsTableProps = {
 	extractedData: ExtractedData[];
+	emailTemplates: EmailTemplateData[];
 	isPreviewingEmails: boolean;
 	isSendingEmails: boolean;
+	isLoadingEmailTemplates: boolean;
 	onSendEmails: () => void;
 	onPreviewEmails: () => void;
 	onUpdateData: (
@@ -27,8 +28,10 @@ type ResultsTableProps = {
 
 export function ResultsTable({
 	extractedData,
+	emailTemplates,
 	isPreviewingEmails,
 	isSendingEmails,
+	isLoadingEmailTemplates,
 	onSendEmails,
 	onPreviewEmails,
 	onUpdateData,
@@ -70,8 +73,9 @@ export function ResultsTable({
 		}
 	};
 
-	const handleTemplateChange = (rowIndex: number, template: EmailTemplate) => {
-		onUpdateData(rowIndex, "template", template);
+	const handleTemplateChange = (rowIndex: number, value: string) => {
+		// All values are now templateIds from dynamic templates
+		onUpdateData(rowIndex, "templateId", value);
 	};
 
 	// Calculate successful vs failed extractions
@@ -249,27 +253,59 @@ export function ResultsTable({
 											</div>
 										) : (
 											<Select
-												value={data.template || EmailTemplate.ACKNOWLEDGMENT}
-												onValueChange={(value) =>
-													handleTemplateChange(index, value as EmailTemplate)
-												}
+												value={data.templateId || ""}
+												onValueChange={(value) => handleTemplateChange(index, value)}
+												disabled={isLoadingEmailTemplates}
 											>
-												<SelectTrigger className="h-8 text-sm">
-													<SelectValue />
+												<SelectTrigger className={`h-8 text-sm ${!data.templateId ? 'border-yellow-300 bg-yellow-50' : ''}`}>
+													<SelectValue placeholder={
+														emailTemplates.length > 0 
+															? "Select template..." 
+															: "No templates available"
+													} />
 												</SelectTrigger>
 												<SelectContent>
-													<SelectItem value={EmailTemplate.ACKNOWLEDGMENT}>
-														<div className="flex items-center gap-2">
-															<Mail className="h-3 w-3" />
-															Acknowledgment
+													{emailTemplates.length > 0 ? (
+														<>
+															{!data.templateId && (
+																<div className="px-2 py-2 text-xs text-yellow-700 bg-yellow-50 border-b">
+																	⚠️ No template assigned - select one to enable email sending
+																</div>
+															)}
+															{emailTemplates.map((template) => (
+																<SelectItem key={template.id} value={template.id}>
+																	<div className="flex items-center gap-2">
+																		<div 
+																			className={`h-2 w-2 rounded-full ${
+																				template.isDefault 
+																					? 'bg-green-500' 
+																					: 'bg-blue-500'
+																			}`} 
+																		/>
+																		<span className="truncate max-w-[200px]">{template.name}</span>
+																		<Badge variant="secondary" className="ml-auto text-xs">
+																			{template.category}
+																		</Badge>
+																		{template.isDefault && (
+																			<Badge variant="outline" className="text-xs">
+																				Default
+																			</Badge>
+																		)}
+																	</div>
+																</SelectItem>
+															))}
+														</>
+													) : (
+														<div className="px-2 py-4 text-center text-sm text-muted-foreground">
+															<div className="mb-2">No email templates found.</div>
+															<a 
+																href="/email-templates" 
+																className="text-blue-600 hover:text-blue-700 text-xs underline"
+															>
+																Create templates first →
+															</a>
 														</div>
-													</SelectItem>
-													<SelectItem value={EmailTemplate.SCREENING}>
-														<div className="flex items-center gap-2">
-															<FileText className="h-3 w-3" />
-															Screening Questions
-														</div>
-													</SelectItem>
+													)}
 												</SelectContent>
 											</Select>
 										)}

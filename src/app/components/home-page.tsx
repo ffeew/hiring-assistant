@@ -15,12 +15,16 @@ export function HomePage() {
 		jobPosts,
 		selectedJobPost,
 		setSelectedJobPost,
+		emailTemplates,
 		isExtracting,
 		isPreviewingEmails,
 		isSendingEmails,
 		isLoadingJobPosts,
+		isLoadingEmailTemplates,
 		emailPreviews,
 		showEmailPreview,
+		hasTemplateIssues,
+		extractionsWithoutTemplates,
 		handleFileChange,
 		handleUpload,
 		handleSendEmails,
@@ -99,10 +103,35 @@ export function HomePage() {
 					</div>
 				)}
 
+				{hasTemplateIssues && extractedData.length > 0 && (
+					<div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg shadow-sm">
+						<h3 className="text-lg font-medium mb-2 text-yellow-800">
+							⚠️ Email Templates Required
+						</h3>
+						<p className="text-sm text-yellow-700 mb-3">
+							{extractionsWithoutTemplates} candidate(s) don&apos;t have email templates assigned. 
+							You need to create email templates before sending emails.
+						</p>
+						<div className="flex flex-col sm:flex-row gap-2">
+							<a 
+								href="/email-templates" 
+								className="inline-flex items-center px-3 py-2 text-sm font-medium text-yellow-800 bg-yellow-100 border border-yellow-300 rounded-md hover:bg-yellow-200 transition-colors"
+							>
+								Create Email Templates
+							</a>
+							<span className="text-xs text-yellow-600 self-center">
+								After creating templates, re-process resumes or select templates manually below
+							</span>
+						</div>
+					</div>
+				)}
+
 				<ResultsTable
 					extractedData={extractedData}
+					emailTemplates={emailTemplates}
 					isPreviewingEmails={isPreviewingEmails}
 					isSendingEmails={isSendingEmails}
+					isLoadingEmailTemplates={isLoadingEmailTemplates}
 					onSendEmails={handleSendEmails}
 					onPreviewEmails={handlePreviewEmails}
 					onUpdateData={updateExtractedData}

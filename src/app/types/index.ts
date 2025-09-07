@@ -7,11 +7,6 @@ import { z } from 'zod';
 // ExtractedData is now an alias for ExtractionResponseData for backward compatibility
 export type { ExtractionResponseData as ExtractedData } from '@/app/api/extract/extract.validator';
 
-export enum EmailTemplate {
-  ACKNOWLEDGMENT = 'acknowledgment',
-  SCREENING = 'screening'
-}
-
 // ============================================================================
 // CONSTANTS (Used across multiple modules)
 // ============================================================================
