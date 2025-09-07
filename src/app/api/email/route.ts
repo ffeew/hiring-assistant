@@ -9,6 +9,7 @@ import { sendEmailsBodySchema } from './email.validator';
 import { ZodError } from 'zod';
 import { withAuth, AuthenticatedRequest } from '@/lib/auth-middleware';
 import { ApplicantsService } from '../applicants/applicants.service';
+import { EmailTemplatesService } from '../email-templates/email-templates.service';
 
 async function sendEmails(request: AuthenticatedRequest) {
   try {
@@ -48,7 +49,7 @@ async function sendEmails(request: AuthenticatedRequest) {
       jobTitle: request.user.jobTitle || undefined,
     };
 
-    const emailService = new EmailService(userConfig);
+    const emailService = new EmailService(userConfig, request.user.id);
 
     // Test connection first
     const connectionTest = await emailService.testConnection();
@@ -97,13 +98,25 @@ async function sendEmails(request: AuthenticatedRequest) {
         if (emailSent) {
           // Log successful email communication
           await withTransaction(async (tx) => {
-            const emailContent = emailService.generateEmailTemplate(recipient as EmailData);
+            const emailContent = await emailService.generateEmailTemplate(recipient as EmailData);
             const companyName = userConfig.companyName || 'Our Company';
-            const position = recipient.jobPosition || 'Software Engineer Intern';
-            const emailType = recipient.template === 'screening' ? 'screening' : 'acknowledgment';
-            const subject = emailType === 'screening'
-              ? `Next Steps - ${position} Position at ${companyName}`
-              : `Thank you for your interest in our position at ${companyName}`;
+            
+            // Get template info and rendered subject for logging
+            let emailType: 'acknowledgment' | 'screening' | 'interview' | 'offer' | 'rejection' | 'follow_up' = 'acknowledgment';
+            let subject = `Email from ${companyName}`;
+            
+            try {
+              const template = await EmailTemplatesService.getTemplate(request.user.id, recipient.templateId);
+              emailType = template.category as typeof emailType;
+              // Get the actual rendered subject from the email content
+              const { subject: renderedSubject } = await emailService.getEmailContent(recipient as EmailData);
+              subject = renderedSubject;
+            } catch (error) {
+              console.error('Error getting template for logging:', error);
+              // Use generic subject if template lookup fails
+              subject = `Email from ${companyName}`;
+              emailType = 'acknowledgment'; // Default fallback
+            }
 
             await tx
               .insert(emailCommunicationTable)

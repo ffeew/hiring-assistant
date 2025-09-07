@@ -48,28 +48,30 @@ The codebase reflects its origins as a personal tool: it works well for my speci
 
 ### 📧 Advanced Email Communication
 
-- **Template-Based Emails**: Multiple professionally designed email templates
-  - **Acknowledgment**: Thank you email confirming receipt of application
-  - **Screening**: Detailed follow-up with technical and availability questions
-  - **Interview**: Interview scheduling and preparation emails
-  - **Rejection/Offer**: Status update communications
+- **Dynamic Template System**: User-created email templates with AI-powered generation and default template selection
+  - **Template Categories**: Acknowledgment, screening, interview, offer, rejection, follow-up
+  - **Default Template Selection**: Automatic template assignment using database default template or first available template
+  - **Template Requirement**: Users must create templates before processing resumes (guided workflow)
+  - **Ready-to-Use Templates**: See **[Sample Email Templates Guide](src/app/email-templates/README.md)** for copy-paste ready templates
 - **AI-Powered Template Generation**: Create professional email templates using natural language prompts
   - **Smart Content Creation**: Describe what you want and AI generates the complete template
   - **Multiple Tones**: Choose from professional, friendly, formal, or casual writing styles
   - **Variable Integration**: Automatically includes dynamic variables like `{{firstName}}`, `{{jobPosition}}`
   - **Category-Aware**: AI understands context for different email types (acknowledgment, screening, etc.)
   - **User-Friendly**: No HTML knowledge required - perfect for non-technical users
-- **Template Management System**: Create, edit, and organize custom email templates
+- **Template Management System**: Create, edit, and organize custom email templates with database storage
   - **Template Editor**: Rich editor with live preview and variable insertion
   - **Template Library**: Save and reuse templates across different hiring campaigns
   - **Default Templates**: Mark frequently used templates as defaults for quick access
+  - **Enhanced Template Variables**: 15+ dynamic variables from resume data (skills, experience, education, professional links)
 - **Optional Setup**: Sign up without Gmail configuration, set up email later when needed
 - **Configuration Validation**: Smart validation with helpful error messages and setup guidance
 - **Email Preview System**: Preview all emails with actual recipient data before sending
 - **Bulk Email Operations**: Send personalized emails to filtered candidate groups
 - **Gmail Integration**: Secure SMTP support with encrypted app password storage
 - **Email History**: Complete communication log per candidate
-- **Template Customization**: Dynamic template variables based on user profile and company branding
+- **Default Template Assignment**: Uses database default template (isDefault: true) or first available template
+- **Template Validation System**: User guidance and visual indicators when templates are missing
 - **Delivery Tracking**: Email status monitoring with error handling and retry logic
 
 ### 🤖 AI-Powered Interview Assistant
@@ -150,7 +152,7 @@ The codebase reflects its origins as a personal tool: it works well for my speci
 ### AI & Machine Learning
 - **Resume Parsing**: Mistral AI for structured data extraction from PDFs/DOCX
 - **Interview Assistant**: Groq AI SDK for real-time question generation
-- **Email Template Generation**: Groq AI (GPT OSS 120B) for creating professional email templates from natural language prompts
+- **Email Template Generation**: Groq AI (GPT OSS 120B) for creating professional email templates from natural language prompts with default template selection
 - **Speech Recognition**: Browser Web Speech API for live transcription
 - **Content Analysis**: AI-powered conversation analysis and summarization
 
@@ -246,11 +248,13 @@ The codebase reflects its origins as a personal tool: it works well for my speci
 5. **Save Candidates** - Store candidates in your database for future reference
 
 ### Email Communication
-1. **Select Candidates** - Choose candidates for email outreach
-2. **Choose Template** - Pick from acknowledgment, screening, or custom templates
-3. **Preview Emails** - Review personalized email content before sending
-4. **Send Bulk Emails** - Deliver emails to multiple candidates simultaneously
-5. **Track Delivery** - Monitor email status and handle any delivery issues
+1. **Create Templates** - Use AI to generate email templates or create custom ones (required first step)
+   - Quick start: Copy templates from **[Sample Email Templates Guide](src/app/email-templates/README.md)**
+2. **Process Resumes** - Default template selection automatically assigns templates based on database defaults
+3. **Select Candidates** - Choose candidates for email outreach
+4. **Preview Emails** - Review personalized email content with dynamic template variables
+5. **Send Bulk Emails** - Deliver emails to multiple candidates simultaneously
+6. **Track Delivery** - Monitor email status and handle any delivery issues
 
 ### Interview Management
 1. **Interview Assistant** - Generate interview questions based on candidate resume and job requirements
@@ -273,7 +277,7 @@ The codebase reflects its origins as a personal tool: it works well for my speci
 - **Core Resume Processing Pipeline**: Full end-to-end resume upload and AI-powered data extraction
 - **Database Architecture**: Complete Drizzle ORM setup with normalized schema and relationships  
 - **AI Integration**: Mistral AI for resume parsing and Groq AI for interview questions
-- **Email System**: AI-powered template generation, multi-template service with optional setup and bulk sending capabilities
+- **Email System**: Complete template-email integration with default template selection, AI-powered template generation, and comprehensive user guidance system
 - **Profile Management**: Comprehensive user account settings with optional email configuration
 - **Authentication Flow**: Secure user registration, login, and session management with flexible onboarding
 - **Live Interview Features**: Real-time speech recognition and dynamic question generation
@@ -285,7 +289,7 @@ The codebase reflects its origins as a personal tool: it works well for my speci
 
 - **Interview Session Management**: Completing the interview workflow and session tracking
 - **Advanced Candidate Pipeline**: Enhanced status management and bulk operations
-- **Email Template System**: User-customizable templates and improved delivery tracking
+- **Template Management Enhancements**: Advanced template editor features and usage analytics
 - **Search & Filtering**: Advanced candidate search across all data fields
 - **Error Handling & Validation**: Comprehensive error recovery and user feedback
 - **Performance Optimization**: Database query optimization and caching improvements
@@ -303,7 +307,7 @@ This project is still in **early development** and **not ready for production us
 
 #### Known Limitations & Missing Features
 - ⚠️ **Limited Testing**: Not extensively tested with large datasets or concurrent users
-- ⚠️ **Manual Configuration**: Requires technical setup for AI APIs, database, and email
+- ⚠️ **Manual Configuration**: Requires technical setup for AI APIs, database, and email; templates must be created before processing resumes
 - ⚠️ **Basic Error Handling**: Many edge cases and error scenarios not fully handled
 - ⚠️ **No Migration Path**: Database schema may change without migration support
 - ⚠️ **Performance Issues**: May struggle with large resume batches or concurrent operations

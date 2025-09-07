@@ -67,8 +67,26 @@ export const extractionResponseSchema = z.object({
   firstName: z.string().optional(),
   lastName: z.string().optional(),
   email: z.string().optional(),
-  template: z.enum(['acknowledgment', 'screening']).optional(),
+  templateId: z.string().nullable(), // Dynamic template ID (can be null if no templates exist)
   jobPosition: z.string().optional(),
+  // Enhanced candidate data from Mistral OCR
+  phone: z.string().optional(),
+  linkedinUrl: z.string().optional(),
+  githubUrl: z.string().optional(),
+  portfolioUrl: z.string().optional(),
+  skills: z.array(z.string()).optional(),
+  experience: z.array(z.object({
+    company: z.string(),
+    position: z.string(),
+    duration: z.string().optional(),
+    description: z.string().optional(),
+  })).optional(),
+  education: z.array(z.object({
+    institution: z.string(),
+    degree: z.string().optional(),
+    fieldOfStudy: z.string().optional(),
+    graduationYear: z.string().optional(),
+  })).optional(),
   error: z.string().optional(), // Will be present on failed extraction
 });
 
@@ -80,8 +98,26 @@ export const successfulExtractionSchema = z.object({
   firstName: z.string(),
   lastName: z.string(),
   email: z.string().email(),
-  template: z.enum(['acknowledgment', 'screening']),
+  templateId: z.string(), // Required dynamic template ID
   jobPosition: z.string().optional(),
+  // Enhanced candidate data
+  phone: z.string().optional(),
+  linkedinUrl: z.string().optional(),
+  githubUrl: z.string().optional(),
+  portfolioUrl: z.string().optional(),
+  skills: z.array(z.string()).optional(),
+  experience: z.array(z.object({
+    company: z.string(),
+    position: z.string(),
+    duration: z.string().optional(),
+    description: z.string().optional(),
+  })).optional(),
+  education: z.array(z.object({
+    institution: z.string(),
+    degree: z.string().optional(),
+    fieldOfStudy: z.string().optional(),
+    graduationYear: z.string().optional(),
+  })).optional(),
 });
 
 // ============================================================================

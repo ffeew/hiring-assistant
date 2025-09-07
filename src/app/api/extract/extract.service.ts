@@ -18,6 +18,7 @@ import { withNotDeleted } from '@/lib/soft-delete';
 import { r2Service } from "@/lib/r2";
 import { groq } from '@ai-sdk/groq';
 import { generateObject } from 'ai';
+import { TemplateSelectionService } from './template-selection.service';
 
 const client = new Mistral({ apiKey: env.MISTRAL_API_KEY });
 
@@ -47,7 +48,11 @@ export class ExtractService {
         const duplicateCheck = await this.checkForDuplicateResume(userId, fileBuffer);
 
         if (duplicateCheck.isDuplicate) {
-          // Return existing resume data without processing
+          // For duplicates, try to get a smart template selection or fallback to default screening
+          const selectedTemplateId = await TemplateSelectionService.getDefaultTemplate(userId, 'screening') ||
+                                    await TemplateSelectionService.getDefaultTemplate(userId, 'acknowledgment');
+
+          // Return existing resume data without processing (templateId can be null)
           return {
             fileName: file.name,
             resumeId: duplicateCheck.resumeId!,
@@ -55,7 +60,7 @@ export class ExtractService {
             firstName: duplicateCheck.firstName!,
             lastName: duplicateCheck.lastName!,
             email: duplicateCheck.email!,
-            template: 'screening',
+            templateId: selectedTemplateId, // Can be null if no templates exist
           };
         }
 
@@ -88,6 +93,17 @@ export class ExtractService {
           jobPostId
         );
 
+        // Template selection: use default template or first available template
+        let selectedTemplateId = await TemplateSelectionService.selectTemplateForCandidate(
+          userId
+        );
+
+        if (!selectedTemplateId) {
+          // Fallback to category-specific default templates if no templates available
+          selectedTemplateId = await TemplateSelectionService.getDefaultTemplate(userId, 'screening') ||
+                              await TemplateSelectionService.getDefaultTemplate(userId, 'acknowledgment');
+        }
+
         return {
           fileName: file.name,
           resumeId,
@@ -95,7 +111,15 @@ export class ExtractService {
           firstName: structuredResumeData.firstName,
           lastName: structuredResumeData.lastName,
           email: structuredResumeData.email,
-          template: 'screening', // Default template
+          templateId: selectedTemplateId, // Can be null if no templates exist
+          // Include all extracted data for enhanced email templates
+          phone: structuredResumeData.phone,
+          linkedinUrl: structuredResumeData.linkedinUrl,
+          githubUrl: structuredResumeData.githubUrl,
+          portfolioUrl: structuredResumeData.portfolioUrl,
+          skills: structuredResumeData.skills,
+          experience: structuredResumeData.experience,
+          education: structuredResumeData.education,
         };
       })
     );
@@ -108,6 +132,7 @@ export class ExtractService {
         console.error(`Error processing file ${files[index].name}:`, result.reason);
         return {
           fileName: files[index].name,
+          templateId: null, // No template for failed extractions
           error: result.reason instanceof Error ? result.reason.message : 'Unknown error occurred'
         };
       }

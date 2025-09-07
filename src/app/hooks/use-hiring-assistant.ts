@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
 import type { ExtractedData, SuccessfulExtractionData, JobPost } from "../types";
-import { EmailTemplate } from "../types";
 import { useJobPosts } from "./use-job-posts";
 import { useExtractResumesMutation, useSendEmailsMutation, useEmailPreviewMutation } from "./use-api-mutations";
+import { useEmailTemplates } from "./use-email-templates";
 import type { EmailPreviewResponse } from "@/lib/api-client";
 
 // Type guard to check if extraction was successful
@@ -12,8 +12,13 @@ function isSuccessfulExtraction(data: ExtractedData): data is SuccessfulExtracti
          !!data.applicantId && 
          !!data.firstName && 
          !!data.lastName && 
-         !!data.email && 
-         !!data.template;
+         !!data.email;
+         // Note: templateId can be null if no templates exist, we'll handle this in the UI
+}
+
+// Type guard to check if data has a valid template assigned
+function hasValidTemplate(data: ExtractedData): boolean {
+  return !!data.templateId;
 }
 
 export function useHiringAssistant() {
@@ -26,6 +31,13 @@ export function useHiringAssistant() {
 
   // Fetch user's active job posts using TanStack Query
   const { data: jobPosts = [], isLoading: isLoadingJobPosts } = useJobPosts(true);
+
+  // Fetch active email templates
+  const { data: emailTemplatesResponse, isLoading: isLoadingEmailTemplates } = useEmailTemplates({
+    isActive: true,
+    limit: 100
+  });
+  const emailTemplates = emailTemplatesResponse?.data || [];
 
   // React Query mutations
   const extractResumesMutation = useExtractResumesMutation();
@@ -67,20 +79,8 @@ export function useHiringAssistant() {
         jobPostId: selectedJobPost.id
       });
       
-      // Initialize template field to SCREENING as default for all extracted data
-      // Only add template for successful extractions (those without errors)
-      const dataWithDefaultTemplate: ExtractedData[] = result.map((item) => ({
-        fileName: item.fileName || '',
-        firstName: item.firstName || '',
-        lastName: item.lastName || '',
-        email: item.email || '',
-        template: (item.template as EmailTemplate) || EmailTemplate.SCREENING,
-        jobPosition: item.jobPosition,
-        resumeId: item.resumeId,
-        applicantId: item.applicantId,
-        error: item.error
-      }));
-      setExtractedData(dataWithDefaultTemplate);
+      // The data now comes with intelligent template selection already done
+      setExtractedData(result);
     } catch (error) {
       console.error("Error uploading files:", error);
       alert("Error extracting data from resumes.");
@@ -94,16 +94,38 @@ export function useHiringAssistant() {
       return;
     }
 
+    // Check if all successful extractions have valid templates
+    const extractionsWithoutTemplates = successfulExtractions.filter(data => !hasValidTemplate(data));
+
+    if (extractionsWithoutTemplates.length > 0) {
+      alert(
+        `Cannot send emails: ${extractionsWithoutTemplates.length} candidate(s) don't have email templates assigned.\n\n` +
+        `Please:\n` +
+        `1. Create email templates at /email-templates\n` +
+        `2. Re-process the resumes to auto-assign templates\n` +
+        `OR manually select templates for each candidate below.`
+      );
+      return;
+    }
+
     try {
       const payload = {
         recipients: successfulExtractions.map(data => ({
           firstName: data.firstName,
           lastName: data.lastName,
           email: data.email,
-          template: data.template,
+          templateId: data.templateId, // Required dynamic template ID
           jobPosition: selectedJobPost?.title || customJobPosition,
           resumeId: data.resumeId,
           applicantId: data.applicantId,
+          // Enhanced candidate data
+          phone: data.phone,
+          linkedinUrl: data.linkedinUrl,
+          githubUrl: data.githubUrl,
+          portfolioUrl: data.portfolioUrl,
+          skills: data.skills,
+          experience: data.experience,
+          education: data.education,
         })),
         jobPostId: selectedJobPost?.id,
       };
@@ -139,14 +161,36 @@ export function useHiringAssistant() {
       return;
     }
 
+    // Check if all successful extractions have valid templates
+    const extractionsWithoutTemplates = successfulExtractions.filter(data => !hasValidTemplate(data));
+
+    if (extractionsWithoutTemplates.length > 0) {
+      alert(
+        `Cannot preview emails: ${extractionsWithoutTemplates.length} candidate(s) don't have email templates assigned.\n\n` +
+        `Please:\n` +
+        `1. Create email templates at /email-templates\n` +
+        `2. Re-process the resumes to auto-assign templates\n` +
+        `OR manually select templates for each candidate below.`
+      );
+      return;
+    }
+
     try {
       const payload = {
         recipients: successfulExtractions.map(data => ({
           firstName: data.firstName,
           lastName: data.lastName,
           email: data.email,
-          template: data.template,
+          templateId: data.templateId, // Required dynamic template ID
           jobPosition: selectedJobPost?.title || customJobPosition,
+          // Enhanced candidate data for previews
+          phone: data.phone,
+          linkedinUrl: data.linkedinUrl,
+          githubUrl: data.githubUrl,
+          portfolioUrl: data.portfolioUrl,
+          skills: data.skills,
+          experience: data.experience,
+          education: data.education,
         })),
       };
 
@@ -167,6 +211,11 @@ export function useHiringAssistant() {
     );
   };
 
+  // Calculate template status for UI feedback
+  const successfulExtractions = extractedData.filter(isSuccessfulExtraction);
+  const extractionsWithoutTemplates = successfulExtractions.filter(data => !hasValidTemplate(data));
+  const hasTemplateIssues = extractionsWithoutTemplates.length > 0;
+
   return {
     files,
     extractedData,
@@ -175,12 +224,16 @@ export function useHiringAssistant() {
     setSelectedJobPost,
     customJobPosition,
     setCustomJobPosition,
+    emailTemplates,
     isExtracting: extractResumesMutation.isPending,
     isPreviewingEmails: emailPreviewMutation.isPending,
     isSendingEmails: sendEmailsMutation.isPending,
     isLoadingJobPosts,
+    isLoadingEmailTemplates,
     emailPreviews,
     showEmailPreview,
+    hasTemplateIssues,
+    extractionsWithoutTemplates: extractionsWithoutTemplates.length,
     handleFileChange,
     handleUpload,
     handleSendEmails,
