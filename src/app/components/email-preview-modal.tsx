@@ -50,8 +50,8 @@ export function EmailPreviewModal({
 
 	return (
 		<Dialog open={isOpen} onOpenChange={onClose}>
-			<DialogContent className="md:max-w-6xl max-h-[95vh] flex flex-col">
-				<DialogHeader>
+			<DialogContent className="md:max-w-6xl max-h-[95vh] w-[95vw] flex flex-col">
+				<DialogHeader className="flex-shrink-0">
 					<DialogTitle className="flex items-center gap-2">
 						<Mail className="h-5 w-5" />
 						Email Preview ({emailPreviews.length} recipient
@@ -62,67 +62,63 @@ export function EmailPreviewModal({
 					</DialogDescription>
 				</DialogHeader>
 
-				<ScrollArea className="flex-1">
-					<div className="flex flex-col gap-4">
-						{emailPreviews.map((preview, index) => (
-							<Card key={index}>
-								<CardHeader>
-									<div className="flex items-center justify-between">
-										<div className="flex items-center gap-3">
-											<div className="flex items-center gap-2">
-												<User className="h-4 w-4" />
-												<CardTitle className="text-base">
-													{preview.recipient.firstName}{" "}
-													{preview.recipient.lastName}
-												</CardTitle>
-											</div>
-											<Badge
-												variant={getTemplateBadgeVariant(preview.template)}
-											>
-												{preview.template}
-											</Badge>
+				<div className="flex flex-col gap-4 pr-4 overflow-y-scroll">
+					{emailPreviews.map((preview, index) => (
+						<Card key={index}>
+							<CardHeader>
+								<div className="flex items-center justify-between">
+									<div className="flex items-center gap-3">
+										<div className="flex items-center gap-2">
+											<User className="h-4 w-4" />
+											<CardTitle className="text-base">
+												{preview.recipient.firstName}{" "}
+												{preview.recipient.lastName}
+											</CardTitle>
 										</div>
+										<Badge variant={getTemplateBadgeVariant(preview.template)}>
+											{preview.template}
+										</Badge>
 									</div>
-									<CardDescription>
-										To: {preview.recipient.email}
-										{preview.recipient.jobPosition && (
-											<span> • Position: {preview.recipient.jobPosition}</span>
-										)}
-									</CardDescription>
-								</CardHeader>
-								<CardContent>
-									<div className="flex flex-col gap-4">
-										<div className="flex flex-col">
-											<div className="text-sm font-medium text-muted-foreground mb-1">
-												Subject
-											</div>
-											<div className="font-medium">{preview.subject}</div>
+								</div>
+								<CardDescription>
+									To: {preview.recipient.email}
+									{preview.recipient.jobPosition && (
+										<span> • Position: {preview.recipient.jobPosition}</span>
+									)}
+								</CardDescription>
+							</CardHeader>
+							<CardContent>
+								<div className="flex flex-col gap-4">
+									<div className="flex flex-col">
+										<div className="text-sm font-medium text-muted-foreground mb-1">
+											Subject
 										</div>
-
-										<Separator />
-
-										<div className="flex flex-col">
-											<div className="text-sm font-medium text-muted-foreground mb-2">
-												Email Content
-											</div>
-
-											<iframe
-												srcDoc={preview.html}
-												className="w-full h-96 border-0 rounded-md"
-												sandbox="allow-same-origin"
-												title={`Email preview for ${preview.recipient.firstName} ${preview.recipient.lastName}`}
-											/>
-										</div>
+										<div className="font-medium">{preview.subject}</div>
 									</div>
-								</CardContent>
-							</Card>
-						))}
-					</div>
-				</ScrollArea>
 
-				<Separator />
+									<Separator />
 
-				<div className="flex items-center justify-end gap-3 pt-4">
+									<div className="flex flex-col">
+										<div className="text-sm font-medium text-muted-foreground mb-2">
+											Email Content
+										</div>
+
+										<iframe
+											srcDoc={preview.html}
+											className="w-full h-[35rem] border-0 rounded-md"
+											sandbox="allow-same-origin"
+											title={`Email preview for ${preview.recipient.firstName} ${preview.recipient.lastName}`}
+										/>
+									</div>
+								</div>
+							</CardContent>
+						</Card>
+					))}
+				</div>
+
+				<Separator className="flex-shrink-0" />
+
+				<div className="flex items-center justify-end gap-3 pt-4 flex-shrink-0">
 					<Button variant="outline" onClick={onClose} disabled={isLoading}>
 						<X className="h-4 w-4" />
 						Cancel
