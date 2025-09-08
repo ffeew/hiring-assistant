@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { EmailService, EmailData, EmailTemplate, UserEmailConfig } from '../email.service';
+import { EmailService, EmailData, UserEmailConfig } from '../email.service';
 import { safeDecrypt } from '@/lib/crypto';
 import { emailPreviewBodySchema } from '../email.validator';
 import { ZodError } from 'zod';
@@ -44,24 +44,19 @@ async function generateEmailPreviews(request: AuthenticatedRequest) {
       jobTitle: request.user.jobTitle || undefined,
     };
 
-    const emailService: EmailService = new EmailService(userConfig);
+    const emailService: EmailService = new EmailService(userConfig, request.user.id);
 
     // Generate previews for each recipient
-    const previews = recipients.map((recipient) => {
-      const template = (recipient.template === 'screening' ? EmailTemplate.SCREENING : EmailTemplate.ACKNOWLEDGMENT);
-      const companyName = userConfig.companyName || 'Our Company';
-      const position = userConfig.jobTitle || 'Software Engineer Intern';
-      const subject = template === EmailTemplate.SCREENING
-        ? `Next Steps - ${position} Position at ${companyName}`
-        : `Thank you for your interest in our position at ${companyName}`;
+    const previews = await Promise.all(recipients.map(async (recipient) => {
+      const { subject, html } = await emailService.getEmailContent(recipient as EmailData);
 
       return {
-        html: emailService.generateEmailTemplate(recipient as EmailData),
+        html,
         subject,
         recipient,
-        template
+        template: 'dynamic' // All templates are now dynamic
       };
-    });
+    }));
 
     return NextResponse.json({
       success: true,

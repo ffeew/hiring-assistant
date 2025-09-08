@@ -2,6 +2,7 @@ import { TemplateVariable } from '@/app/api/email-templates/email-templates.vali
 
 // Available template variables for email templates
 export const DEFAULT_TEMPLATE_VARIABLES: TemplateVariable[] = [
+  // Basic candidate information
   {
     name: "firstName",
     description: "Applicant's first name",
@@ -27,6 +28,14 @@ export const DEFAULT_TEMPLATE_VARIABLES: TemplateVariable[] = [
     type: "string"
   },
   {
+    name: "phone",
+    description: "Applicant's phone number",
+    required: false,
+    type: "string"
+  },
+
+  // Job and company information
+  {
     name: "jobPosition",
     description: "Job position title",
     required: false,
@@ -50,6 +59,78 @@ export const DEFAULT_TEMPLATE_VARIABLES: TemplateVariable[] = [
     required: false,
     type: "string"
   },
+
+  // Professional links
+  {
+    name: "linkedinUrl",
+    description: "Applicant's LinkedIn profile URL",
+    required: false,
+    type: "string"
+  },
+  {
+    name: "githubUrl",
+    description: "Applicant's GitHub profile URL",
+    required: false,
+    type: "string"
+  },
+  {
+    name: "portfolioUrl",
+    description: "Applicant's portfolio website URL",
+    required: false,
+    type: "string"
+  },
+  {
+    name: "linkedinProfile",
+    description: "Applicant's LinkedIn profile URL (alias for linkedinUrl)",
+    required: false,
+    type: "string"
+  },
+  {
+    name: "portfolioLink",
+    description: "Applicant's portfolio or GitHub URL",
+    required: false,
+    type: "string"
+  },
+
+  // Skills and experience
+  {
+    name: "skills",
+    description: "Comma-separated list of all applicant skills",
+    required: false,
+    type: "string"
+  },
+  {
+    name: "topSkills",
+    description: "Top 5 most relevant skills",
+    required: false,
+    type: "string"
+  },
+  {
+    name: "experienceYears",
+    description: "Estimated years of professional experience",
+    required: false,
+    type: "string"
+  },
+  {
+    name: "latestCompany",
+    description: "Most recent employer company name",
+    required: false,
+    type: "string"
+  },
+  {
+    name: "latestPosition",
+    description: "Most recent job title/position",
+    required: false,
+    type: "string"
+  },
+  {
+    name: "education",
+    description: "Highest education (degree, field, institution)",
+    required: false,
+    type: "string"
+  },
+
+  // Dates
   {
     name: "currentDate",
     description: "Current date in readable format",
@@ -65,16 +146,38 @@ export const DEFAULT_TEMPLATE_VARIABLES: TemplateVariable[] = [
 ];
 
 export interface TemplateContext {
+  // Basic candidate information
   firstName?: string;
   lastName?: string;
   fullName?: string;
   email?: string;
+  phone?: string;
+
+  // Job and company information
   jobPosition?: string;
   companyName?: string;
   senderName?: string;
   senderTitle?: string;
+
+  // Professional links
+  linkedinUrl?: string;
+  githubUrl?: string;
+  portfolioUrl?: string;
+  linkedinProfile?: string;
+  portfolioLink?: string;
+
+  // Skills and experience
+  skills?: string;
+  topSkills?: string;
+  experienceYears?: string;
+  latestCompany?: string;
+  latestPosition?: string;
+  education?: string;
+
+  // Dates
   currentDate?: Date;
   interviewDate?: Date;
+  
   [key: string]: string | Date | number | boolean | undefined;
 }
 

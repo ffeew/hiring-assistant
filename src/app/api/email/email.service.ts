@@ -1,17 +1,31 @@
 import nodemailer from 'nodemailer';
-import { generateAcknowledgmentTemplate, generateScreeningTemplate } from './templates';
-
-export enum EmailTemplate {
-  ACKNOWLEDGMENT = 'acknowledgment',
-  SCREENING = 'screening'
-}
+import { TemplateEngine, TemplateContext } from '@/lib/template-engine';
+import { EmailTemplatesService } from '../email-templates/email-templates.service';
 
 export interface EmailData {
   firstName: string;
   lastName: string;
   email: string;
-  template?: EmailTemplate;
+  templateId: string; // Required dynamic template selection
   jobPosition?: string;
+  // Enhanced candidate data from Mistral OCR
+  phone?: string;
+  linkedinUrl?: string;
+  githubUrl?: string;
+  portfolioUrl?: string;
+  skills?: string[];
+  experience?: Array<{
+    company: string;
+    position: string;
+    duration?: string;
+    description?: string;
+  }>;
+  education?: Array<{
+    institution: string;
+    degree?: string;
+    fieldOfStudy?: string;
+    graduationYear?: string;
+  }>;
 }
 
 export interface UserEmailConfig {
@@ -25,6 +39,7 @@ export interface UserEmailConfig {
 export class EmailService {
   private transporter: nodemailer.Transporter;
   private userConfig: UserEmailConfig;
+  private userId: string;
 
   static validateConfiguration(config: UserEmailConfig): { isValid: boolean; errors: string[] } {
     const errors: string[] = [];
@@ -51,13 +66,14 @@ export class EmailService {
     return !!(user.gmailAddress && user.gmailAppPassword && user.name);
   }
 
-  constructor(userConfig: UserEmailConfig) {
+  constructor(userConfig: UserEmailConfig, userId: string) {
     const validationResult = EmailService.validateConfiguration(userConfig);
     if (!validationResult.isValid) {
       throw new Error(`Email configuration is incomplete: ${validationResult.errors.join(', ')}`);
     }
 
     this.userConfig = userConfig;
+    this.userId = userId;
     this.transporter = nodemailer.createTransport({
       service: 'gmail',
       host: 'smtp.gmail.com',
@@ -72,8 +88,7 @@ export class EmailService {
 
   async sendEmail(recipient: EmailData): Promise<boolean> {
     try {
-      const template = recipient.template || EmailTemplate.ACKNOWLEDGMENT;
-      const { subject, html } = this.getEmailContent(recipient, template);
+      const { subject, html } = await this.getEmailContent(recipient);
 
       const mailOptions = {
         from: `"${this.userConfig.senderName}" <${this.userConfig.gmailAddress}>`,
@@ -118,29 +133,91 @@ export class EmailService {
     return results;
   }
 
-  public generateEmailTemplate(recipient: EmailData): string {
-    // Maintain backward compatibility - use acknowledgment template by default
-    const template = recipient.template || EmailTemplate.ACKNOWLEDGMENT;
-    return this.getEmailContent(recipient, template).html;
+  public async generateEmailTemplate(recipient: EmailData): Promise<string> {
+    const { html } = await this.getEmailContent(recipient);
+    return html;
   }
 
-  private getEmailContent(recipient: EmailData, template: EmailTemplate): { subject: string; html: string; } {
+  public async getEmailContent(recipient: EmailData): Promise<{ subject: string; html: string; }> {
     const companyName = this.userConfig.companyName || 'Our Company';
-    const position = recipient.jobPosition || 'Software Engineer Intern';
+    const position = recipient.jobPosition || 'Software Engineer Position';
 
-    switch (template) {
-      case EmailTemplate.SCREENING:
-        return {
-          subject: `Next Steps - ${position} Position at ${companyName}`,
-          html: generateScreeningTemplate(recipient, this.userConfig)
-        };
-      case EmailTemplate.ACKNOWLEDGMENT:
-      default:
-        return {
-          subject: `Thank you for your interest in our position at ${companyName}`,
-          html: generateAcknowledgmentTemplate(recipient, this.userConfig)
-        };
+    try {
+      const template = await EmailTemplatesService.getTemplate(this.userId, recipient.templateId);
+      
+      // Enhanced template context with all candidate data
+      const context: TemplateContext = {
+        // Basic info
+        firstName: recipient.firstName,
+        lastName: recipient.lastName,
+        fullName: `${recipient.firstName} ${recipient.lastName}`,
+        email: recipient.email,
+        phone: recipient.phone,
+        jobPosition: position,
+        companyName,
+        senderName: this.userConfig.senderName,
+        senderTitle: this.userConfig.jobTitle || 'Hiring Manager',
+        currentDate: new Date(),
+
+        // Professional links
+        linkedinUrl: recipient.linkedinUrl,
+        githubUrl: recipient.githubUrl,
+        portfolioUrl: recipient.portfolioUrl,
+        
+        // Enhanced candidate data
+        skills: recipient.skills?.join(', ') || '',
+        topSkills: recipient.skills?.slice(0, 5).join(', ') || '',
+        experienceYears: this.calculateExperienceYears(recipient.experience),
+        latestCompany: recipient.experience?.[0]?.company || '',
+        latestPosition: recipient.experience?.[0]?.position || '',
+        education: this.formatEducation(recipient.education),
+        linkedinProfile: recipient.linkedinUrl,
+        portfolioLink: recipient.portfolioUrl || recipient.githubUrl,
+      };
+
+      // Render template with enhanced context
+      const renderedSubject = TemplateEngine.render(template.subject, context);
+      const renderedContent = TemplateEngine.render(template.content, context);
+
+      // Increment usage count
+      await EmailTemplatesService.incrementUsage(this.userId, recipient.templateId);
+
+      return {
+        subject: renderedSubject,
+        html: renderedContent
+      };
+    } catch (error) {
+      console.error('Error loading template:', error);
+      throw new Error(`Failed to load email template: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
+  }
+
+  private calculateExperienceYears(experience?: EmailData['experience']): string {
+    if (!experience || experience.length === 0) return '0';
+    
+    // Simple heuristic: count unique companies and assume average 2 years per position
+    const uniqueCompanies = new Set(experience.map(exp => exp.company.toLowerCase())).size;
+    const estimatedYears = Math.max(1, uniqueCompanies * 1.5);
+    
+    return Math.floor(estimatedYears).toString();
+  }
+
+  private formatEducation(education?: EmailData['education']): string {
+    if (!education || education.length === 0) return '';
+    
+    const latest = education[0];
+    const degree = latest.degree || '';
+    const field = latest.fieldOfStudy || '';
+    const institution = latest.institution || '';
+    
+    if (degree && field) {
+      return `${degree} in ${field} from ${institution}`;
+    } else if (degree) {
+      return `${degree} from ${institution}`;
+    } else if (field) {
+      return `${field} from ${institution}`;
+    }
+    return institution;
   }
 
   async testConnection(): Promise<boolean> {
