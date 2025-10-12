@@ -128,54 +128,13 @@ src/app/api/example/
 
 **Controller Pattern with Standardized Error Handling (ENFORCED STANDARD):**
 
-All controllers must follow this error handling pattern with consistent response format:
+All controllers follow: `try { validate → service call → response } catch { handle errors }`
 
+**Error Response Format** (all errors must use this structure):
 ```typescript
-async function createExample(request: AuthenticatedRequest) {
-	try {
-		const body = await request.json();
-		const validatedData = createExampleBodySchema.parse(body);
-		const result = await ExampleService.create(request.user.id, validatedData);
-		return NextResponse.json({ success: true, data: result });
-	} catch (error) {
-		// Standardized error handling - ALL controllers must follow this pattern
-		if (error instanceof ZodError) {
-			return NextResponse.json(
-				{
-					error: "Validation failed",
-					details: error.errors.map((e) => ({
-						field: e.path.join("."),
-						message: e.message,
-					})),
-				},
-				{ status: 400 }
-			);
-		}
-
-		// Business logic errors
-		if (
-			error instanceof Error &&
-			error.message.includes("specific-condition")
-		) {
-			return NextResponse.json(
-				{
-					error: "Business logic error",
-					details: [{ field: "fieldName", message: error.message }],
-				},
-				{ status: 400 }
-			);
-		}
-
-		// Generic server errors
-		console.error("Error in createExample:", error);
-		return NextResponse.json(
-			{
-				error: "Internal server error",
-				details: [{ field: "server", message: "Failed to create example" }],
-			},
-			{ status: 500 }
-		);
-	}
+{
+	error: string,
+	details: Array<{ field: string, message: string }>
 }
 ```
 
@@ -216,82 +175,35 @@ src/app/
 ├── components/              # App-wide shared components only
 │   ├── layout/             # Dashboard layout, header, sidebar
 │   ├── shared/             # Truly shared utilities (3+ features)
-│   │   ├── loading-spinner.tsx
-│   │   ├── theme-toggle.tsx
-│   │   └── background-pattern.tsx
 │   ├── auth/               # Authentication components
-│   ├── landing/            # Landing page sections
-│   └── interview-assistant/  # Shared interview component
-├── home/                   # Resume processing feature
+│   └── landing/            # Landing page sections
+├── [feature]/              # Feature folders (home, job-posts, profile, email-templates, etc.)
 │   ├── components/         # Feature-specific UI components
-│   │   ├── home-content.tsx
-│   │   ├── email-preview-modal.tsx
-│   │   ├── job-post-selector.tsx
-│   │   ├── results-table.tsx
-│   │   ├── file-upload-section.tsx
-│   │   └── feature-card.tsx
-│   ├── queries/
-│   │   └── use-resume-mutations.ts
-│   └── hooks/
-│       └── use-hiring-assistant.ts
-├── job-posts/
-│   ├── components/         # Job post UI components
-│   │   ├── job-posts-content.tsx
-│   │   ├── job-post-card.tsx
-│   │   └── job-post-form.tsx
-│   ├── queries/
-│   │   ├── use-job-posts.ts
-│   │   └── use-job-post.ts
-│   └── mutations/
-│       ├── use-create-job-post.ts
-│       ├── use-update-job-post.ts
-│       ├── use-delete-job-post.ts
-│       └── use-toggle-status.ts
-├── profile/
-│   ├── components/
-│   │   └── profile-settings-modal.tsx
-│   ├── queries/
-│   │   └── use-profile.ts
-│   └── mutations/
-│       └── use-update-profile.ts
-├── email-templates/
-│   ├── components/
-│   │   ├── email-template-editor.tsx
-│   │   └── email-template-preview.tsx
-│   ├── queries/
-│   │   ├── use-email-templates-query.ts
-│   │   ├── use-email-template.ts
-│   │   └── use-template-preview.ts
-│   └── mutations/
-│       ├── use-create-template.ts
-│       ├── use-update-template.ts
-│       ├── use-delete-template.ts
-│       ├── use-duplicate-template.ts
-│       └── use-generate-template.ts
-├── resumes/
-│   ├── components/
-│   │   └── resumes-content.tsx
-│   └── queries/
-│       └── use-resumes.ts
-├── interview-assistant/
-│   ├── queries/
-│   │   ├── use-applicants.ts
-│   │   └── use-resume-files.ts
-│   └── mutations/
-│       └── use-generate-interview-questions.ts
-└── live-interview/
-    ├── components/
-    │   ├── live-interview-dashboard.tsx
-    │   ├── live-transcript.tsx
-    │   ├── question-suggestions.tsx
-    │   └── session-setup-modal.tsx
-    ├── queries/
-    │   ├── use-interview-session-query.ts
-    │   └── use-conversation-turns-query.ts
-    ├── mutations/
-    │   └── use-session-mutations.ts
-    └── hooks/
-        └── use-speech-recognition.ts
+│   │   └── [feature]-content.tsx
+│   ├── queries/            # Data fetching hooks
+│   │   └── use-[resource].ts
+│   ├── mutations/          # Data modification hooks
+│   │   ├── use-create-[resource].ts
+│   │   ├── use-update-[resource].ts
+│   │   └── use-delete-[resource].ts
+│   └── hooks/              # Feature-specific custom hooks
+│       └── use-[feature]-logic.ts
+```
+
+**Example - job-posts feature:**
+```
+job-posts/
+├── components/
+│   ├── job-posts-content.tsx
+│   ├── job-post-card.tsx
+│   └── job-post-form.tsx
+├── queries/
+│   ├── use-job-posts.ts
+│   └── use-job-post.ts
+└── mutations/
+    ├── use-create-job-post.ts
+    ├── use-update-job-post.ts
+    └── use-delete-job-post.ts
 ```
 
 **Component Organization Principles:**
@@ -347,32 +259,6 @@ All API routes follow the 3-layer validator/service/controller pattern:
 - `/api/extract` - Resume OCR extraction with auto-template assignment
 - `/api/interview-sessions` - Interview session management (CRUD)
 - `/api/auth/[...all]` - Better Auth endpoints
-
-### Profile Management System
-
-The profile management system provides comprehensive user account settings with a focus on optional email configuration:
-
-**Key Components:**
-
-- **Profile Page** (`/app/profile/page.tsx`) - Main profile management interface with dashboard layout
-- **Profile Content** (`/app/profile/profile-page-content.tsx`) - Comprehensive profile display and management
-- **Profile Settings Modal** (`/app/profile/components/profile-settings-modal.tsx`) - Modal for editing profile details
-- **API Integration** - Uses `useProfileQuery()` and `useUpdateProfileMutation()` for data management
-
-**Features:**
-
-- **Optional Email Configuration**: Users can sign up without Gmail setup and configure later
-- **Visual Status Indicators**: Clear badges showing email configuration status (Configured/Not Configured)
-- **Account Security Display**: Shows encryption status and secure password storage indicators
-- **Responsive Design**: Mobile-friendly layout with progressive disclosure
-- **Integration**: Seamless integration with existing ProfileSettingsModal for editing
-
-**Architecture Patterns:**
-
-- **Data Fetching**: TanStack Query with `useProfileQuery()` for server state management
-- **Form Handling**: React Hook Form with Zod validation for profile updates
-- **Error Handling**: Graceful handling of missing data with proper fallbacks
-- **Type Safety**: Proper type conversion between API responses and UI components
 
 ## Development Guidelines
 
@@ -519,30 +405,20 @@ const metadata = safeParseJSONObject(
 **Query Hook Structure (MANDATORY PATTERN):**
 
 ```typescript
-// Each query file must follow this pattern (.ts files, no "use client" directive needed)
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-
-interface DataType {
-	id: string;
-	// ... other fields
-}
-
-async function fetchData(): Promise<DataType[]> {
-	const response = await fetch("/api/endpoint");
-	if (!response.ok) throw new Error("Failed to fetch data");
-	const result = await response.json();
-	return result.data;
-}
-
+// queries/use-[resource].ts
 export function useDataName() {
 	return useQuery({
 		queryKey: ["data-name"],
-		queryFn: fetchData,
-		staleTime: 0, // Customize as needed
+		queryFn: async () => {
+			const res = await fetch("/api/endpoint");
+			if (!res.ok) throw new Error("Failed to fetch");
+			return (await res.json()).data;
+		},
+		staleTime: 0, // 0 for frequent updates, 60000 for stable data
 	});
 }
 
-// Invalidation utility (REQUIRED)
+// REQUIRED: Invalidation utility
 export function useInvalidateDataName() {
 	const queryClient = useQueryClient();
 	return () => queryClient.invalidateQueries({ queryKey: ["data-name"] });
@@ -552,44 +428,13 @@ export function useInvalidateDataName() {
 **Mutation Hook Structure (MANDATORY PATTERN):**
 
 ```typescript
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-
+// mutations/use-create-[resource].ts
 export function useCreateItem() {
 	const queryClient = useQueryClient();
-
 	return useMutation({
 		mutationFn: (data: CreateItemData) => apiClient.createItem(data),
-		mutationKey: ["create-item"],
-		onSuccess: () => {
-			queryClient.invalidateQueries({ queryKey: ["items"] });
-		},
+		onSuccess: () => queryClient.invalidateQueries({ queryKey: ["items"] }),
 	});
-}
-```
-
-**Usage in Components:**
-
-```typescript
-// Import queries and their invalidation utilities
-import {
-	useJobPosts,
-	useInvalidateJobPosts,
-} from "@/app/job-posts/queries/use-job-posts";
-import { useCreateJobPost } from "@/app/job-posts/mutations/use-create-job-post";
-
-function MyComponent() {
-	const { data: jobPosts, isLoading } = useJobPosts();
-	const createMutation = useCreateJobPost();
-	const invalidateJobs = useInvalidateJobPosts();
-
-	const handleRefresh = () => {
-		invalidateJobs(); // Manual invalidation if needed
-	};
-
-	// Mutations auto-invalidate on success
-	const handleCreate = () => {
-		createMutation.mutate(data);
-	};
 }
 ```
 
@@ -625,232 +470,57 @@ function MyComponent() {
 
 ## UI Component System (shadcn/ui)
 
-This application uses **shadcn/ui** as the primary component library for consistent, accessible, and modern UI design.
+**Component Location**: `src/components/ui/` imported from `@/components/ui/*`
 
-### Component Architecture
-
-**Component Location**: All shadcn/ui components are installed in `src/components/ui/` and imported from `@/components/ui/*`
-
-**Design System Features**:
-
-- Built on Radix UI primitives for accessibility
-- Fully customizable with CSS variables
-- Dark mode support with next-themes integration
-- TypeScript support with proper type definitions
-- Consistent design tokens and spacing
+**Design System**: Radix UI primitives, CSS variables, dark mode (next-themes), TypeScript support
 
 ### Installed Components
 
-The following shadcn/ui components are available and actively used:
+**Core**: Button (variants: default, destructive, outline, secondary, ghost, link), Card, Badge, Input, Textarea
 
-#### Core Components
+**Forms**: Form (with FormField, FormItem, FormLabel, FormControl, FormMessage), Select, Alert
 
-- **Button** (`@/components/ui/button`) - Primary actions, variants: default, destructive, outline, secondary, ghost, link
-- **Card** (`@/components/ui/card`) - Content containers with CardHeader, CardContent, CardDescription, CardTitle
-- **Badge** (`@/components/ui/badge`) - Status indicators, variants: default, secondary, destructive, outline
-- **Input** (`@/components/ui/input`) - Text inputs with proper validation states
-- **Textarea** (`@/components/ui/textarea`) - Multi-line text inputs
+**Layout**: Dialog, Table, Separator, ScrollArea
 
-#### Form Components
+### Usage Patterns (MANDATORY)
 
-- **Form** (`@/components/ui/form`) - Form wrapper with FormField, FormItem, FormLabel, FormControl, FormMessage
-- **Select** (`@/components/ui/select`) - Dropdown selections with SelectTrigger, SelectContent, SelectItem, SelectValue
-- **Alert** (`@/components/ui/alert`) - Status messages with AlertDescription, variants: default, destructive
-
-#### Layout Components
-
-- **Dialog** (`@/components/ui/dialog`) - Modal dialogs with DialogContent, DialogHeader, DialogTitle, DialogDescription
-- **Table** (`@/components/ui/table`) - Data tables with TableHeader, TableBody, TableRow, TableHead, TableCell
-- **Separator** (`@/components/ui/separator`) - Visual dividers
-- **ScrollArea** (`@/components/ui/scroll-area`) - Custom scrollable areas
-
-### Usage Patterns
-
-#### Form Pattern (MANDATORY)
-
-All forms MUST use React Hook Form + Zod + shadcn/ui Form components:
-
+**Forms**: React Hook Form + Zod + shadcn/ui Form components
 ```typescript
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
-import {
-	Form,
-	FormControl,
-	FormField,
-	FormItem,
-	FormLabel,
-	FormMessage,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-
-const schema = z.object({
-	email: z.string().email("Invalid email address"),
-	name: z.string().min(1, "Name is required"),
-});
-
-function ExampleForm() {
-	const form = useForm({
-		resolver: zodResolver(schema),
-		defaultValues: { email: "", name: "" },
-	});
-
-	return (
-		<Form {...form}>
-			<form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-				<FormField
-					control={form.control}
-					name="email"
-					render={({ field }) => (
-						<FormItem>
-							<FormLabel>Email</FormLabel>
-							<FormControl>
-								<Input placeholder="Enter email" {...field} />
-							</FormControl>
-							<FormMessage />
-						</FormItem>
-					)}
-				/>
-				<Button type="submit">Submit</Button>
-			</form>
-		</Form>
-	);
-}
+const form = useForm({ resolver: zodResolver(schema), defaultValues: {...} });
+<Form {...form}>
+  <form onSubmit={form.handleSubmit(onSubmit)}>
+    <FormField control={form.control} name="field" render={({ field }) => (
+      <FormItem>
+        <FormLabel>Label</FormLabel>
+        <FormControl><Input {...field} /></FormControl>
+        <FormMessage />
+      </FormItem>
+    )} />
+  </form>
+</Form>
 ```
 
-#### Modal Pattern
+**Modals**: Use Dialog with proper state management (`open`, `onOpenChange`)
 
-Use Dialog components for all modals with proper state management:
+**Tables**: Wrap in Card, use Table components (TableHeader, TableBody, TableRow, TableHead, TableCell)
 
-```typescript
-import {
-	Dialog,
-	DialogContent,
-	DialogHeader,
-	DialogTitle,
-	DialogDescription,
-} from "@/components/ui/dialog";
+### Guidelines
 
-function ExampleModal({ isOpen, onClose, children }) {
-	return (
-		<Dialog open={isOpen} onOpenChange={onClose}>
-			<DialogContent>
-				<DialogHeader>
-					<DialogTitle>Modal Title</DialogTitle>
-					<DialogDescription>Modal description</DialogDescription>
-				</DialogHeader>
-				{children}
-			</DialogContent>
-		</Dialog>
-	);
-}
-```
+**Icons**: Lucide React only, sizes: h-3 w-3, h-4 w-4, h-5 w-5, icons before text with `gap-2`
 
-#### Table Pattern
+**Loading**: Use `@/app/components/shared/loading-spinner`, disable elements during load
 
-Use Table components for all data display:
+**Errors**: Alert with `variant="destructive"`, include icons (AlertCircle, XCircle)
 
-```typescript
-import {
-	Table,
-	TableBody,
-	TableCell,
-	TableHead,
-	TableHeader,
-	TableRow,
-} from "@/components/ui/table";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+**Responsive**: Use Tailwind responsive classes (`sm:`, `md:`, `lg:`), mobile-first approach
 
-function DataTable({ data }) {
-	return (
-		<Card>
-			<CardHeader>
-				<CardTitle>Data Table</CardTitle>
-			</CardHeader>
-			<CardContent>
-				<Table>
-					<TableHeader>
-						<TableRow>
-							<TableHead>Column 1</TableHead>
-							<TableHead>Column 2</TableHead>
-						</TableRow>
-					</TableHeader>
-					<TableBody>
-						{data.map((item) => (
-							<TableRow key={item.id}>
-								<TableCell>{item.field1}</TableCell>
-								<TableCell>{item.field2}</TableCell>
-							</TableRow>
-						))}
-					</TableBody>
-				</Table>
-			</CardContent>
-		</Card>
-	);
-}
-```
+**Styling**:
+- Button variants for action types (default/outline/destructive)
+- Badge variants for status indicators
+- Form spacing: `space-y-4` or `space-y-6`
+- Layout spacing: `gap-2`, `gap-3`, `gap-4`
 
-### Component Guidelines
-
-#### Icon Usage
-
-- **Primary Icons**: Use Lucide React icons exclusively (`lucide-react`)
-- **Icon Sizing**: Standard sizes are h-3 w-3, h-4 w-4, h-5 w-5 for consistent scale
-- **Icon Placement**: Always place icons before text with proper spacing (`gap-2`)
-
-#### Loading States
-
-- Use the custom `LoadingSpinner` component from `@/app/components/shared/loading-spinner` for async operations
-- Disable interactive elements during loading states
-- Provide clear loading text alongside spinners
-
-#### Error Handling
-
-- Use Alert components with `variant="destructive"` for errors
-- Include appropriate icons (AlertCircle, XCircle) for visual clarity
-- Provide actionable error messages when possible
-
-#### Responsive Design
-
-- Use responsive Tailwind classes (`sm:`, `md:`, `lg:`)
-- Ensure components work well on mobile devices
-- Use appropriate spacing and sizing for different viewports
-
-### Styling Conventions
-
-#### Color Usage
-
-- **Primary Actions**: Use Button default variant or `bg-primary` classes
-- **Secondary Actions**: Use Button outline or secondary variants
-- **Destructive Actions**: Use `variant="destructive"` for delete/remove actions
-- **Status Indicators**: Use Badge components with appropriate variants
-
-#### Spacing
-
-- **Form Spacing**: Use `space-y-4` or `space-y-6` for form field containers
-- **Card Spacing**: Standard CardContent padding is handled automatically
-- **Layout Spacing**: Use consistent gap classes (`gap-2`, `gap-3`, `gap-4`)
-
-#### Component Customization
-
-- Extend components using className prop with Tailwind utilities
-- Use CSS variables for theme customization in `globals.css`
-- Maintain design consistency across all components
-
-### Adding New Components
-
-To add new shadcn/ui components:
-
-```bash
-npx shadcn@latest add [component-name]
-```
-
-**Installation Examples**:
-
-- `npx shadcn@latest add dropdown-menu`
-- `npx shadcn@latest add toast`
-- `npx shadcn@latest add checkbox`
+**Adding Components**: `npx shadcn@latest add [component-name]`
 
 ## React Hooks Usage Guidelines
 
@@ -860,33 +530,10 @@ npx shadcn@latest add [component-name]
 
 #### When NOT to use useEffect
 
-- **Event Handling**: Use onChange, onClick, onSubmit handlers
-- **Data Fetching**: Use TanStack Query (React Query)
-- **Form State**: Use React Hook Form with defaultValues
-- **Derived State**: Calculate during render with useMemo
-
-```typescript
-// ❌ WRONG - useEffect for event responses
-useEffect(() => {
-	if (selectedId) queryClient.invalidateQueries({ queryKey: ["data"] });
-}, [selectedId]);
-
-// ✅ CORRECT - Event handler
-<Select
-	onValueChange={(value) => {
-		field.onChange(value);
-		queryClient.invalidateQueries({ queryKey: ["data"] });
-	}}
-/>;
-
-// ❌ WRONG - useEffect for data fetching
-useEffect(() => {
-	fetchData().then(setData);
-}, []);
-
-// ✅ CORRECT - React Query
-const { data } = useQuery({ queryKey: ["data"], queryFn: fetchData });
-```
+- **Event Handling**: Use onChange, onClick, onSubmit handlers instead
+- **Data Fetching**: Use TanStack Query (React Query) instead
+- **Form State**: Use React Hook Form with defaultValues instead
+- **Derived State**: Calculate during render with useMemo instead
 
 #### When useEffect IS Appropriate (Rare Cases)
 
