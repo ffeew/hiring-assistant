@@ -11,18 +11,21 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import {
-	Play,
-	Users,
-	MessageSquare,
-	Clock,
-	AlertCircle,
-} from "lucide-react";
+import { Play, Users, MessageSquare, Clock, AlertCircle } from "lucide-react";
 
-import { useInterviewSession, CreateSessionData } from "@/app/hooks/use-interview-session";
-import { useSpeechRecognition } from "@/app/hooks/use-speech-recognition";
+import type { CreateSessionData } from "@/app/live-interview/mutations/use-session-mutations";
+import { useSpeechRecognition } from "@/app/live-interview/hooks/use-speech-recognition";
+import { useInterviewSessionQuery } from "@/app/live-interview/queries/use-interview-session-query";
+import { useConversationTurnsQuery } from "@/app/live-interview/queries/use-conversation-turns-query";
+import {
+	useCreateSession,
+	useStartSession,
+	useEndSession,
+	useAddTurn,
+	useGenerateQuestions,
+} from "@/app/live-interview/mutations/use-session-mutations";
 import { useApplicants } from "@/app/interview-assistant/query/use-applicants";
-import { useJobPosts } from "@/app/interview-assistant/query/use-job-posts";
+import { useJobPosts } from "@/app/job-posts/queries/use-job-posts";
 import { useResumeFiles } from "@/app/interview-assistant/query/use-resume-files";
 
 import { SessionSetupModal } from "./session-setup-modal";
@@ -47,25 +50,69 @@ export function LiveInterviewDashboard() {
 		useResumeFiles();
 
 	// Interview session management
+	const [currentSessionId, setCurrentSessionId] = useState<string | undefined>(
+		undefined
+	);
+
+	// Queries
 	const {
-		session,
-		conversationTurns,
-		currentSessionId,
-		isLoadingSession,
-		isStarting,
-		isEnding,
-		isGeneratingQuestions,
-		generatedQuestions,
-		conversationAnalysis,
-		createSession,
-		startSession,
-		endSession,
-		addConversationTurn,
-		generateDynamicQuestions,
-		sessionError,
-		addTurnError,
-		generateQuestionsError,
-	} = useInterviewSession();
+		data: session,
+		isLoading: isLoadingSession,
+		error: sessionError,
+	} = useInterviewSessionQuery(currentSessionId);
+	const { data: conversationTurns = [] } =
+		useConversationTurnsQuery(currentSessionId);
+
+	// Mutations
+	const createSessionMutation = useCreateSession();
+	const startSessionMutation = useStartSession();
+	const endSessionMutation = useEndSession();
+	const addTurnMutation = useAddTurn();
+	const generateQuestionsMutation = useGenerateQuestions();
+
+	// Derived state
+	const isStarting = startSessionMutation.isPending;
+	const isEnding = endSessionMutation.isPending;
+	const isGeneratingQuestions = generateQuestionsMutation.isPending;
+	const generatedQuestions = generateQuestionsMutation.data?.questions || [];
+	const conversationAnalysis =
+		generateQuestionsMutation.data?.conversationAnalysis;
+	const addTurnError = addTurnMutation.error;
+	const generateQuestionsError = generateQuestionsMutation.error;
+
+	// Action functions
+	const createSession = async (data: CreateSessionData) => {
+		const result = await createSessionMutation.mutateAsync(data);
+		setCurrentSessionId(result.id);
+		return result;
+	};
+
+	const startSession = (sessionId: string) =>
+		startSessionMutation.mutateAsync(sessionId);
+	const endSession = (sessionId: string) =>
+		endSessionMutation.mutateAsync(sessionId);
+	const addConversationTurn = (turnData: {
+		speaker: "interviewer" | "candidate";
+		content: string;
+		confidence?: number;
+	}) => {
+		if (!currentSessionId) return;
+		return addTurnMutation.mutateAsync({
+			sessionId: currentSessionId,
+			turnData,
+		});
+	};
+	const generateDynamicQuestions = (params: {
+		conversationContext: string;
+		questionCount?: number;
+		lastFewTurns?: number;
+	}) => {
+		if (!currentSessionId) return;
+		return generateQuestionsMutation.mutateAsync({
+			sessionId: currentSessionId,
+			...params,
+		});
+	};
 
 	// Speech recognition
 	const {

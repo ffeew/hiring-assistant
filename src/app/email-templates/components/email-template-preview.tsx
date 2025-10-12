@@ -8,7 +8,7 @@ import { Separator } from '@/components/ui/separator';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { LoadingSpinner } from '../../components/loading-spinner';
 import { DashboardLayout } from '../../components/dashboard-layout';
-import { useEmailTemplatePreview } from '../../hooks/use-email-templates';
+import { useEmailTemplatePreview } from '../queries/use-template-preview';
 import { EmailTemplateData, TemplateCategory } from '../../types';
 
 interface EmailTemplatePreviewProps {

@@ -1,9 +1,9 @@
 import { useMutation } from '@tanstack/react-query';
-import type { GenerateTemplateBody } from '../api/email-templates/generate/generate.validator';
+import type { GenerateTemplateBody } from '@/app/api/email-templates/generate/generate.validator';
 
 interface GeneratedTemplate {
   name: string;
-  subject: string; 
+  subject: string;
   content: string;
 }
 

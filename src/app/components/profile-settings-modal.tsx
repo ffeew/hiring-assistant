@@ -5,7 +5,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import type { Session } from "@/lib/auth";
-import { useUpdateProfileMutation } from "@/app/hooks/use-api-mutations";
+import { useUpdateProfile as useUpdateProfileMutation } from "@/app/profile/mutations/use-update-profile";
 import type { ProfileUpdateData } from "@/app/types";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";

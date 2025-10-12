@@ -24,11 +24,9 @@ import {
 } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { DashboardLayout } from "../components/dashboard-layout";
-import {
-	useEmailTemplates,
-	useDeleteEmailTemplate,
-	useDuplicateEmailTemplate,
-} from "../hooks/use-email-templates";
+import { useEmailTemplates } from "./queries/use-email-templates-query";
+import { useDeleteEmailTemplate } from "./mutations/use-delete-template";
+import { useDuplicateEmailTemplate } from "./mutations/use-duplicate-template";
 import { EmailTemplateData, TemplateCategory } from "../types";
 import { EmailTemplateEditor } from "./components/email-template-editor";
 import { EmailTemplatePreview } from "./components/email-template-preview";

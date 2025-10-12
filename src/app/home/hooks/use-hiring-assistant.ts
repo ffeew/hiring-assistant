@@ -1,19 +1,19 @@
 import { useState, useEffect } from "react";
-import type { ExtractedData, SuccessfulExtractionData, JobPost } from "../types";
-import { useJobPosts } from "./use-job-posts";
-import { useExtractResumesMutation, useSendEmailsMutation, useEmailPreviewMutation } from "./use-api-mutations";
-import { useEmailTemplates } from "./use-email-templates";
+import type { ExtractedData, SuccessfulExtractionData, JobPost } from "../../types";
+import { useJobPosts } from "../../job-posts/queries/use-job-posts";
+import { useExtractResumesMutation, useSendEmailsMutation, useEmailPreviewMutation } from "../queries/use-resume-mutations";
+import { useEmailTemplates } from "../../email-templates/queries/use-email-templates-query";
 import type { EmailPreviewResponse } from "@/lib/api-client";
 
 // Type guard to check if extraction was successful
 function isSuccessfulExtraction(data: ExtractedData): data is SuccessfulExtractionData {
-  return !data.error && 
-         !!data.resumeId && 
-         !!data.applicantId && 
-         !!data.firstName && 
-         !!data.lastName && 
-         !!data.email;
-         // Note: templateId can be null if no templates exist, we'll handle this in the UI
+  return !data.error &&
+    !!data.resumeId &&
+    !!data.applicantId &&
+    !!data.firstName &&
+    !!data.lastName &&
+    !!data.email;
+  // Note: templateId can be null if no templates exist, we'll handle this in the UI
 }
 
 // Type guard to check if data has a valid template assigned
@@ -78,8 +78,7 @@ export function useHiringAssistant() {
         files,
         jobPostId: selectedJobPost.id
       });
-      
-      // The data now comes with intelligent template selection already done
+
       setExtractedData(result);
     } catch (error) {
       console.error("Error uploading files:", error);

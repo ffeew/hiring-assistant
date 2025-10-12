@@ -5,7 +5,11 @@ import { JobPostCard } from "./job-post-card";
 import { JobPostForm } from "./job-post-form";
 import { LoadingSpinner } from "../loading-spinner";
 import type { JobPost, CreateJobPostData } from "@/app/types";
-import { useJobPosts, useCreateJobPost, useUpdateJobPost, useDeleteJobPost, useToggleJobPostStatus } from "@/app/hooks/use-job-posts";
+import { useJobPosts } from "@/app/job-posts/queries/use-job-posts";
+import { useCreateJobPost } from "@/app/job-posts/mutations/use-create-job-post";
+import { useUpdateJobPost } from "@/app/job-posts/mutations/use-update-job-post";
+import { useDeleteJobPost } from "@/app/job-posts/mutations/use-delete-job-post";
+import { useToggleJobPostStatus } from "@/app/job-posts/mutations/use-toggle-status";
 
 export function JobPostsPage() {
   const [showCreateForm, setShowCreateForm] = useState(false);

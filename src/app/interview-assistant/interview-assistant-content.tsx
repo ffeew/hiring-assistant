@@ -5,7 +5,7 @@ import { LoadingSpinner } from "@/app/components/loading-spinner";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
 import { useApplicants } from "./query/use-applicants";
-import { useJobPosts } from "./query/use-job-posts";
+import { useJobPosts } from "../job-posts/queries/use-job-posts";
 import { useResumeFiles } from "./query/use-resume-files";
 
 export function InterviewAssistantContent() {

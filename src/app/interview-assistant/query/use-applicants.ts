@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 interface Applicant {
   id: string;
@@ -20,4 +20,10 @@ export function useApplicants() {
     queryKey: ["applicants"],
     queryFn: fetchApplicants,
   });
+}
+
+// Invalidation utility
+export function useInvalidateApplicants() {
+  const queryClient = useQueryClient();
+  return () => queryClient.invalidateQueries({ queryKey: ["applicants"] });
 }

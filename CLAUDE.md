@@ -181,20 +181,68 @@ async function createExample(request: AuthenticatedRequest) {
 - Optimistic updates and automatic error handling with rollback
 - Background refetching and request deduplication
 
-**Query Hook Organization**
+**Query Hook Organization (Refactored Architecture)**
 
-- **Global Hooks**: `src/app/hooks/` for app-wide data fetching (job posts, hiring workflow)
-- **Feature-Specific Queries**: Organize in `query/` subdirectories within feature folders
-- **Example Structure**: `src/app/interview-assistant/query/` contains:
-  - `use-applicants.ts` - Applicant data fetching
-  - `use-job-posts.ts` - Job post data fetching  
-  - `use-resume-files.ts` - Resume file data with invalidation utilities
-- **Pattern**: Each hook exports a single `useQuery` hook with typed interfaces
-- **Invalidation**: Separate utility functions for query invalidation (e.g., `invalidateResumeFiles()`)
+This application follows the **"Lowest Common Ancestor"** principle for organizing query hooks:
+
+- **Feature-Specific Queries**: Create `queries/` and `mutations/` subdirectories within feature folders
+- **Shared Queries**: Place in the feature folder that owns the resource (e.g., `job-posts/queries/`)
+- **Co-location**: Hooks live closest to where they are used, moving up the tree only when shared
+
+**Directory Structure:**
+```
+src/app/
+├── job-posts/
+│   ├── queries/              # Shared by multiple features
+│   │   ├── use-job-posts.ts
+│   │   └── use-job-post.ts
+│   └── mutations/
+│       ├── use-create-job-post.ts
+│       ├── use-update-job-post.ts
+│       ├── use-delete-job-post.ts
+│       └── use-toggle-status.ts
+├── profile/
+│   ├── queries/
+│   │   └── use-profile.ts
+│   └── mutations/
+│       └── use-update-profile.ts
+├── email-templates/
+│   ├── queries/
+│   │   ├── use-email-templates-query.ts
+│   │   ├── use-email-template.ts
+│   │   └── use-template-preview.ts
+│   └── mutations/
+│       ├── use-create-template.ts
+│       ├── use-update-template.ts
+│       ├── use-delete-template.ts
+│       ├── use-duplicate-template.ts
+│       └── use-generate-template.ts
+├── interview-assistant/
+│   ├── query/                # LCA for interview features
+│   │   ├── use-applicants.ts
+│   │   └── use-resume-files.ts
+│   └── mutations/
+│       └── use-generate-interview-questions.ts
+├── live-interview/
+│   ├── queries/
+│   │   ├── use-interview-session-query.ts
+│   │   └── use-conversation-turns-query.ts
+│   ├── mutations/
+│   │   └── use-session-mutations.ts
+│   └── hooks/
+│       └── use-speech-recognition.ts
+└── home/
+    ├── queries/
+    │   └── use-resume-mutations.ts
+    └── hooks/
+        └── use-hiring-assistant.ts
+```
+
+**Pattern**: Each query/mutation file exports a single hook with typed interfaces and an invalidation utility function
 
 **State Management & UI Flow**
 
-- Custom hook `src/app/hooks/use-hiring-assistant.ts` orchestrates the entire hiring workflow
+- Custom hook `src/app/home/hooks/use-hiring-assistant.ts` orchestrates the entire hiring workflow
 - Manages file upload → data extraction → template validation → email preview → bulk sending pipeline
 - TanStack Query integration for job posts fetching with loading states
 - **Template Validation System**: Comprehensive validation with `hasTemplateIssues` and `extractionsWithoutTemplates` tracking
@@ -385,14 +433,15 @@ const metadata = safeParseJSONObject(applicant.metadata, applicantMetadataSchema
 ### Query Development Rules (ENFORCED STANDARDS)
 
 **File Organization:**
-1. **Global Queries**: Place in `src/app/hooks/` for app-wide data (job posts, hiring workflow)
-2. **Feature Queries**: Create `query/` subdirectories within feature folders (e.g., `src/app/interview-assistant/query/`)
-3. **Naming Convention**: Use descriptive names like `use-applicants.ts`, `use-resume-files.ts`
+1. **Lowest Common Ancestor (LCA)**: Place queries at the lowest point in the tree where all consumers can access them
+2. **Single Source of Truth**: One query hook per resource, no duplicates
+3. **Separate Files**: Create individual files for queries (`queries/`) and mutations (`mutations/`)
+4. **Naming Convention**: Use descriptive names like `use-job-posts.ts`, `use-create-job-post.ts`
 
-**Hook Structure (MANDATORY PATTERN):**
+**Query Hook Structure (MANDATORY PATTERN):**
 ```typescript
 // Each query file must follow this pattern (.ts files, no "use client" directive needed)
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 interface DataType {
   id: string;
@@ -413,31 +462,51 @@ export function useDataName() {
     staleTime: 0, // Customize as needed
   });
 }
+
+// Invalidation utility (REQUIRED)
+export function useInvalidateDataName() {
+  const queryClient = useQueryClient();
+  return () => queryClient.invalidateQueries({ queryKey: ["data-name"] });
+}
 ```
 
-**Query Invalidation (MANDATORY PATTERN):**
+**Mutation Hook Structure (MANDATORY PATTERN):**
 ```typescript
-// Separate invalidation utilities
-import { queryClient } from "@/app/providers/query-provider";
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 
-export function invalidateDataName() {
-  return queryClient.invalidateQueries({ queryKey: ["data-name"] });
+export function useCreateItem() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (data: CreateItemData) => apiClient.createItem(data),
+    mutationKey: ['create-item'],
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['items'] });
+    },
+  });
 }
 ```
 
 **Usage in Components:**
 ```typescript
-// Import individual hooks
-import { useApplicants } from "./query/use-applicants";
-import { invalidateResumeFiles } from "./query/use-resume-files";
+// Import queries and their invalidation utilities
+import { useJobPosts, useInvalidateJobPosts } from "@/app/job-posts/queries/use-job-posts";
+import { useCreateJobPost } from "@/app/job-posts/mutations/use-create-job-post";
 
-// Use in event handlers, not useEffect
-<Select 
-  onValueChange={(value) => {
-    field.onChange(value);
-    invalidateResumeFiles(); // Trigger refetch
-  }}
-/>
+function MyComponent() {
+  const { data: jobPosts, isLoading } = useJobPosts();
+  const createMutation = useCreateJobPost();
+  const invalidateJobs = useInvalidateJobPosts();
+
+  const handleRefresh = () => {
+    invalidateJobs(); // Manual invalidation if needed
+  };
+
+  // Mutations auto-invalidate on success
+  const handleCreate = () => {
+    createMutation.mutate(data);
+  };
+}
 ```
 
 **Query Configuration Rules:**
@@ -445,6 +514,13 @@ import { invalidateResumeFiles } from "./query/use-resume-files";
 - Use `staleTime: 60 * 1000` (1 minute) for relatively stable data (job posts, applicants)
 - Always handle loading and error states in components
 - Use typed interfaces for all API responses
+- Include invalidation utilities in every query file
+
+**Breaking Down Large Hooks:**
+- Split monolithic hooks into focused, single-purpose hooks
+- Separate queries from mutations into different files
+- Extract business logic into smaller, composable hooks
+- Example: `useHiringAssistant` should be split into `use-file-upload`, `use-email-workflow`, etc.
 
 ### Technology Stack
 

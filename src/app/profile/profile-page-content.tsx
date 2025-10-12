@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useProfileQuery } from "@/app/hooks/use-api-mutations";
+import { useProfile as useProfileQuery } from "@/app/profile/queries/use-profile";
 import { ProfileSettingsModal } from "@/app/components/profile-settings-modal";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";

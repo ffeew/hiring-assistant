@@ -25,8 +25,9 @@ import {
 } from '@/components/ui/form';
 import { DashboardLayout } from '../../components/dashboard-layout';
 import { LoadingSpinner } from '../../components/loading-spinner';
-import { useCreateEmailTemplate, useUpdateEmailTemplate } from '../../hooks/use-email-templates';
-import { useGenerateTemplate } from '../../hooks/use-template-generation';
+import { useCreateEmailTemplate } from '../mutations/use-create-template';
+import { useUpdateEmailTemplate } from '../mutations/use-update-template';
+import { useGenerateTemplate } from '../mutations/use-generate-template';
 import { EmailTemplateData, CreateEmailTemplateData, TemplateCategory, TemplateVariable } from '../../types';
 
 const TEMPLATE_CATEGORIES: { value: TemplateCategory; label: string; description: string }[] = [
