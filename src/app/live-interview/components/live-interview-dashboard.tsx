@@ -40,7 +40,8 @@ export function LiveInterviewDashboard() {
 		"interviewer" | "candidate"
 	>("candidate");
 	const [lastSpeechTime, setLastSpeechTime] = useState<number>(0);
-	const [autoSpeechDetection] = useState(true);
+	const [accumulatedTranscript, setAccumulatedTranscript] = useState<string>("");
+	const [lastInterimTime, setLastInterimTime] = useState<number>(0);
 
 	// Data fetching
 	const { data: applicants = [], isLoading: isLoadingApplicants } =
@@ -114,9 +115,36 @@ export function LiveInterviewDashboard() {
 		});
 	};
 
+	// Helper function to save accumulated transcript as a conversation turn
+	const saveAccumulatedTranscript = (speaker: "interviewer" | "candidate") => {
+		if (!accumulatedTranscript.trim() || !currentSessionId) return;
+
+		addConversationTurn({
+			speaker,
+			content: accumulatedTranscript.trim(),
+			confidence: Math.round(confidence),
+		});
+
+		// Auto-generate questions after candidate responses
+		if (speaker === "candidate" && conversationTurns.length > 0) {
+			const recentContext = conversationTurns
+				.slice(-3)
+				.map((turn) => `${turn.speaker}: ${turn.content}`)
+				.join("\n");
+
+			generateDynamicQuestions({
+				conversationContext: recentContext + `\ncandidate: ${accumulatedTranscript}`,
+				questionCount: 3,
+				lastFewTurns: 5,
+			});
+		}
+
+		// Clear accumulated transcript after saving
+		setAccumulatedTranscript("");
+	};
+
 	// Speech recognition
 	const {
-		transcript,
 		interimTranscript,
 		isListening,
 		isSupported: isSpeechSupported,
@@ -124,7 +152,6 @@ export function LiveInterviewDashboard() {
 		error: speechError,
 		startListening,
 		stopListening,
-		resetTranscript,
 	} = useSpeechRecognition({
 		continuous: true,
 		interimResults: true,
@@ -135,41 +162,37 @@ export function LiveInterviewDashboard() {
 	// Handle speech recognition results
 	function handleSpeechResult(
 		text: string,
-		confidenceScore: number,
+		_confidenceScore: number,
 		isFinal: boolean
 	) {
-		if (
-			isFinal &&
-			text.trim() &&
-			currentSessionId &&
-			session?.status === "in_progress"
-		) {
-			setLastSpeechTime(Date.now());
+		if (!currentSessionId || session?.status !== "in_progress") return;
 
-			// Add conversation turn
-			addConversationTurn({
-				speaker: currentSpeaker,
-				content: text.trim(),
-				confidence: Math.round(confidenceScore * 100),
-			});
+		const now = Date.now();
 
-			// Auto-generate questions after candidate responses
-			if (currentSpeaker === "candidate" && conversationTurns.length > 0) {
-				const recentContext = conversationTurns
-					.slice(-3)
-					.map((turn) => `${turn.speaker}: ${turn.content}`)
-					.join("\n");
-
-				generateDynamicQuestions({
-					conversationContext: recentContext + `\ncandidate: ${text}`,
-					questionCount: 3,
-					lastFewTurns: 5,
-				});
-			}
-
-			resetTranscript();
+		if (isFinal) {
+			// Accumulate final results
+			setAccumulatedTranscript((prev) => (prev + " " + text).trim());
+			setLastSpeechTime(now);
+			// Don't reset lastInterimTime here - we want to track the last interim activity
+		} else if (text.trim()) {
+			// Track interim results timing only when there's actual content
+			// This helps distinguish between active speech and silence
+			setLastInterimTime(now);
 		}
 	}
+
+	// Handle manual speaker change
+	const handleSpeakerChange = (newSpeaker: "interviewer" | "candidate") => {
+		if (newSpeaker === currentSpeaker) return;
+
+		// Save accumulated transcript for previous speaker before switching
+		saveAccumulatedTranscript(currentSpeaker);
+
+		// Switch to new speaker
+		setCurrentSpeaker(newSpeaker);
+		setLastSpeechTime(0);
+		setLastInterimTime(0);
+	};
 
 	// Handle speech recognition end
 	function handleSpeechEnd() {
@@ -183,21 +206,36 @@ export function LiveInterviewDashboard() {
 		}
 	}
 
-	// Auto-detect speaker changes based on speech patterns
+	// Auto-save transcript after 3 seconds of complete silence
 	useEffect(() => {
-		if (!autoSpeechDetection || !session || session.status !== "in_progress")
+		if (!session || session.status !== "in_progress" || !accumulatedTranscript.trim() || !lastSpeechTime) {
 			return;
-
-		const now = Date.now();
-		const timeSinceLastSpeech = now - lastSpeechTime;
-
-		// If there's been a pause longer than 3 seconds, assume speaker change
-		if (timeSinceLastSpeech > 3000 && lastSpeechTime > 0) {
-			setCurrentSpeaker((prev) =>
-				prev === "interviewer" ? "candidate" : "interviewer"
-			);
 		}
-	}, [transcript, lastSpeechTime, autoSpeechDetection, session]);
+
+		// Only trigger auto-save if there's been actual interim activity followed by silence
+		// This prevents premature saves during natural pauses while speaking
+		if (!lastInterimTime) {
+			// No interim activity yet, don't auto-save (user might still be speaking)
+			return;
+		}
+
+		// Set a timer to save after 3 seconds of complete silence (no final or interim results)
+		const timeoutId = setTimeout(() => {
+			const now = Date.now();
+			const timeSinceLastSpeech = now - lastSpeechTime;
+			const timeSinceLastInterim = now - lastInterimTime;
+
+			// Save only if BOTH final and interim results have stopped for 3+ seconds
+			// This indicates true end of speech, not just a pause
+			if (timeSinceLastSpeech >= 3000 && timeSinceLastInterim >= 3000) {
+				saveAccumulatedTranscript(currentSpeaker);
+				setLastSpeechTime(0);
+				setLastInterimTime(0);
+			}
+		}, 3100); // Check slightly after 3 seconds to ensure we meet the threshold
+
+		return () => clearTimeout(timeoutId);
+	}, [session, accumulatedTranscript, lastSpeechTime, lastInterimTime, currentSpeaker, saveAccumulatedTranscript]);
 
 	// Start new interview session
 	const handleStartNewSession = async (sessionData: CreateSessionData) => {
@@ -349,7 +387,7 @@ export function LiveInterviewDashboard() {
 				<div className="lg:col-span-2 space-y-4">
 					<LiveTranscript
 						conversationTurns={conversationTurns}
-						currentTranscript={transcript}
+						currentTranscript={accumulatedTranscript}
 						interimTranscript={interimTranscript}
 						currentSpeaker={currentSpeaker}
 						isListening={isListening}
@@ -360,7 +398,7 @@ export function LiveInterviewDashboard() {
 						session={session}
 						isListening={isListening}
 						currentSpeaker={currentSpeaker}
-						onSpeakerChange={setCurrentSpeaker}
+						onSpeakerChange={handleSpeakerChange}
 						onStartInterview={handleStartInterview}
 						onEndInterview={handleEndInterview}
 						onToggleListening={() =>

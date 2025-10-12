@@ -97,7 +97,7 @@ export function LiveTranscript({
       <CardContent className="flex-1 p-0">
         <ScrollArea className="h-full px-4" ref={scrollAreaRef}>
           <div className="space-y-4 pb-4">
-            {conversationTurns.length === 0 && !interimTranscript && (
+            {conversationTurns.length === 0 && !currentTranscript && !interimTranscript && (
               <div className="text-center text-muted-foreground py-8">
                 <MessageSquare className="h-12 w-12 mx-auto mb-2 opacity-50" />
                 <p>No conversation yet</p>
@@ -133,7 +133,7 @@ export function LiveTranscript({
                       </div>
                       
                       <div className="bg-muted/50 rounded-lg p-3">
-                        <p className="text-sm leading-relaxed">{turn.content}</p>
+                        <p className="text-sm leading-relaxed break-words overflow-wrap-anywhere">{turn.content}</p>
                       </div>
                       
                       {turn.duration && (
@@ -179,7 +179,7 @@ export function LiveTranscript({
                       </div>
                       
                       <div className="bg-muted/30 rounded-lg p-3 border-2 border-dashed border-muted">
-                        <p className="text-sm leading-relaxed">
+                        <p className="text-sm leading-relaxed break-words overflow-wrap-anywhere">
                           {currentTranscript}
                           {interimTranscript && (
                             <span className="text-muted-foreground italic">

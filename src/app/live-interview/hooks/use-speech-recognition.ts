@@ -48,10 +48,10 @@ export function useSpeechRecognition(options: SpeechRecognitionOptions = {}): Sp
   // Check for browser support on mount
   useEffect(() => {
     interface WindowWithSpeechRecognition extends Window {
-      SpeechRecognition?: new() => SpeechRecognition;
-      webkitSpeechRecognition?: new() => SpeechRecognition;
+      SpeechRecognition?: new () => SpeechRecognition;
+      webkitSpeechRecognition?: new () => SpeechRecognition;
     }
-    
+
     const windowWithSpeech = window as WindowWithSpeechRecognition;
     const SpeechRecognitionConstructor = windowWithSpeech.SpeechRecognition || windowWithSpeech.webkitSpeechRecognition;
     if (SpeechRecognitionConstructor) {
@@ -75,7 +75,6 @@ export function useSpeechRecognition(options: SpeechRecognitionOptions = {}): Sp
     // Handle speech recognition results
     recognition.onresult = (event: SpeechRecognitionEvent) => {
       let interimTranscript = '';
-      let finalTranscript = finalTranscriptRef.current;
 
       for (let i = event.resultIndex; i < event.results.length; i++) {
         const result = event.results[i];
@@ -83,16 +82,21 @@ export function useSpeechRecognition(options: SpeechRecognitionOptions = {}): Sp
         const confidenceScore = result[0].confidence;
 
         if (result.isFinal) {
-          finalTranscript += transcriptText + ' ';
           setConfidence(confidenceScore);
-          
+
           // Call onResult callback for final results
+          // The callback will save this to conversation turns
           if (onResult) {
             onResult(transcriptText.trim(), confidenceScore, true);
           }
+
+          // Clear the transcript state immediately after calling onResult
+          // This prevents showing old text in "Processing..." state
+          finalTranscriptRef.current = '';
+          setTranscript('');
         } else {
           interimTranscript += transcriptText;
-          
+
           // Call onResult callback for interim results
           if (onResult) {
             onResult(transcriptText.trim(), confidenceScore, false);
@@ -100,8 +104,7 @@ export function useSpeechRecognition(options: SpeechRecognitionOptions = {}): Sp
         }
       }
 
-      finalTranscriptRef.current = finalTranscript;
-      setTranscript(finalTranscript.trim());
+      // Only update interim transcript, final transcripts are cleared immediately
       setInterimTranscript(interimTranscript);
     };
 
