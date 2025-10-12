@@ -41,7 +41,7 @@ import {
 } from "lucide-react";
 import { useInterviewAssistant } from "@/app/interview-assistant/mutations/use-generate-interview-questions";
 import { invalidateResumeFiles } from "@/app/interview-assistant/queries/use-resume-files";
-import { CallToActionCard } from "@/app/components/ui/call-to-action-card";
+import { CallToActionCard } from "@/app/components/landing/call-to-action-card";
 
 const generateQuestionsSchema = z.object({
 	applicantId: z.string().min(1, "Please select an applicant"),

@@ -6,8 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { LoadingSpinner } from '../../components/loading-spinner';
-import { DashboardLayout } from '../../components/dashboard-layout';
+import { LoadingSpinner } from '../../components/shared/loading-spinner';
+import { DashboardLayout } from '../../components/layout/dashboard-layout';
 import { useEmailTemplatePreview } from '../queries/use-template-preview';
 import { EmailTemplateData, TemplateCategory } from '../../types';
 

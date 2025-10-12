@@ -23,7 +23,7 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { DashboardLayout } from "../components/dashboard-layout";
+import { DashboardLayout } from "../components/layout/dashboard-layout";
 import { useEmailTemplates } from "./queries/use-email-templates-query";
 import { useDeleteEmailTemplate } from "./mutations/use-delete-template";
 import { useDuplicateEmailTemplate } from "./mutations/use-duplicate-template";

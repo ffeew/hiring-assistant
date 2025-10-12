@@ -5,7 +5,7 @@ import { authClient } from "@/app/utils/auth-client";
 import { useRouter } from "next/navigation";
 import type { Session } from "@/lib/auth";
 import Image from "next/image";
-import { ProfileSettingsModal } from "../profile-settings-modal";
+import { ProfileSettingsModal } from "@/app/profile/components/profile-settings-modal";
 
 type User = Session["user"];
 

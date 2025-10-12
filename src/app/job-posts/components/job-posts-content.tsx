@@ -3,15 +3,15 @@
 import { useState } from "react";
 import { JobPostCard } from "./job-post-card";
 import { JobPostForm } from "./job-post-form";
-import { LoadingSpinner } from "../loading-spinner";
+import { LoadingSpinner } from "@/app/components/shared/loading-spinner";
 import type { JobPost, CreateJobPostData } from "@/app/types";
-import { useJobPosts } from "@/app/job-posts/queries/use-job-posts";
-import { useCreateJobPost } from "@/app/job-posts/mutations/use-create-job-post";
-import { useUpdateJobPost } from "@/app/job-posts/mutations/use-update-job-post";
-import { useDeleteJobPost } from "@/app/job-posts/mutations/use-delete-job-post";
-import { useToggleJobPostStatus } from "@/app/job-posts/mutations/use-toggle-status";
+import { useJobPosts } from "../queries/use-job-posts";
+import { useCreateJobPost } from "../mutations/use-create-job-post";
+import { useUpdateJobPost } from "../mutations/use-update-job-post";
+import { useDeleteJobPost } from "../mutations/use-delete-job-post";
+import { useToggleJobPostStatus } from "../mutations/use-toggle-status";
 
-export function JobPostsPage() {
+export function JobPostsContent() {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [editingPost, setEditingPost] = useState<JobPost | null>(null);
 

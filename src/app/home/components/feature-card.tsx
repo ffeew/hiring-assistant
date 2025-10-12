@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ArrowRight, LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { cardVariants, iconSizes, spacing, typography } from "./design-tokens";
+import { cardVariants, iconSizes, spacing, typography } from "@/lib/design-tokens";
 
 interface FeatureCardProps {
   title: string;

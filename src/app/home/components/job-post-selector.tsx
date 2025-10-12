@@ -6,7 +6,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Briefcase, AlertCircle, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import type { JobPost } from "../types";
+import type { JobPost } from "@/app/types";
 
 interface JobPostSelectorProps {
   jobPosts: JobPost[];

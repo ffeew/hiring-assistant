@@ -6,8 +6,8 @@ import { HowItWorks } from "./how-it-works";
 import { TechStack } from "./tech-stack";
 import { OpenSourceCTA } from "./open-source-cta";
 import { GettingStarted } from "./getting-started";
-import { BackgroundPattern } from "../background-pattern";
-import { ThemeToggle } from "../theme-toggle";
+import { BackgroundPattern } from "../shared/background-pattern";
+import { ThemeToggle } from "../shared/theme-toggle";
 import Link from "next/link";
 
 export function LandingPage() {

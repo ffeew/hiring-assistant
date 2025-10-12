@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { authClient } from "@/app/utils/auth-client";
 import { Sidebar } from "./sidebar/sidebar";
 import { DashboardHeader } from "./dashboard-header";
-import { LoadingSpinner } from "./loading-spinner";
+import { LoadingSpinner } from "../shared/loading-spinner";
 import type { Session } from "@/lib/auth";
 
 type User = Session['user'];

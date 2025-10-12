@@ -1,7 +1,7 @@
 "use client";
 
-import { ThemeToggle } from "./theme-toggle";
-import { UserMenu } from "./auth/user-menu";
+import { ThemeToggle } from "../shared/theme-toggle";
+import { UserMenu } from "../auth/user-menu";
 import type { Session } from "@/lib/auth";
 
 type User = Session['user'];

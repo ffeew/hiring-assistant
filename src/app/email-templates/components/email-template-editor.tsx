@@ -23,8 +23,8 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
-import { DashboardLayout } from '../../components/dashboard-layout';
-import { LoadingSpinner } from '../../components/loading-spinner';
+import { DashboardLayout } from '../../components/layout/dashboard-layout';
+import { LoadingSpinner } from '../../components/shared/loading-spinner';
 import { useCreateEmailTemplate } from '../mutations/use-create-template';
 import { useUpdateEmailTemplate } from '../mutations/use-update-template';
 import { useGenerateTemplate } from '../mutations/use-generate-template';

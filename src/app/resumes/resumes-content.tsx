@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { FileText, User, Mail, Calendar, Download, Eye, AlertCircle, CheckCircle, Clock } from 'lucide-react';
 import Link from 'next/link';
+import { useResumes } from './queries/use-resumes';
 
 interface ResumeFile {
   id: string;
@@ -26,11 +27,6 @@ interface ResumeFile {
   applicantLastName: string;
   applicantEmail: string;
   url: string;
-}
-
-interface ApiResponse {
-  success: boolean;
-  resumeFiles: ResumeFile[];
 }
 
 const StatusIcon = ({ status }: { status: 'pending' | 'success' | 'failed' }) => {
@@ -59,33 +55,11 @@ const StatusBadge = ({ status }: { status: 'pending' | 'success' | 'failed' }) =
 };
 
 export function ResumesContent() {
-  const [resumeFiles, setResumeFiles] = useState<ResumeFile[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [selectedResume, setSelectedResume] = useState<ResumeFile | null>(null);
   const [isContentDialogOpen, setIsContentDialogOpen] = useState(false);
 
-  useEffect(() => {
-    fetchResumeFiles();
-  }, []);
-
-  const fetchResumeFiles = async () => {
-    try {
-      setLoading(true);
-      const response = await fetch('/api/resumes');
-      
-      if (!response.ok) {
-        throw new Error('Failed to fetch resume files');
-      }
-
-      const result: ApiResponse = await response.json();
-      setResumeFiles(result.resumeFiles);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Use React Query for data fetching
+  const { data: resumeFiles = [], isLoading: loading, error, refetch } = useResumes();
 
   const formatFileSize = (bytes: number): string => {
     if (bytes === 0) return '0 Bytes';
@@ -131,8 +105,8 @@ export function ResumesContent() {
           <div className="text-center">
             <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
             <h3 className="text-lg font-semibold text-foreground mb-2">Error Loading Resumes</h3>
-            <p className="text-muted-foreground mb-4">{error}</p>
-            <Button onClick={fetchResumeFiles}>Try Again</Button>
+            <p className="text-muted-foreground mb-4">{error instanceof Error ? error.message : 'An error occurred'}</p>
+            <Button onClick={() => refetch()}>Try Again</Button>
           </div>
         </CardContent>
       </Card>

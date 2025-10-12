@@ -2,13 +2,13 @@
 
 import { useState } from "react";
 import { useProfile as useProfileQuery } from "@/app/profile/queries/use-profile";
-import { ProfileSettingsModal } from "@/app/components/profile-settings-modal";
+import { ProfileSettingsModal } from "./components/profile-settings-modal";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { LoadingSpinner } from "@/app/components/loading-spinner";
+import { LoadingSpinner } from "@/app/components/shared/loading-spinner";
 import { 
 	User, 
 	Mail, 

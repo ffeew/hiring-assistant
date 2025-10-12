@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { authClient } from "@/app/utils/auth-client";
-import { ThemeToggle } from "./theme-toggle";
+import { ThemeToggle } from "./shared/theme-toggle";
 import { UserMenu } from "./auth/user-menu";
 import type { Session } from "@/lib/auth";
 

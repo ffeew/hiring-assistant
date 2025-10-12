@@ -1,5 +1,5 @@
 import { SignUpForm } from "@/app/components/auth/signup-form";
-import { BackgroundPattern } from "@/app/components/background-pattern";
+import { BackgroundPattern } from "@/app/components/shared/background-pattern";
 
 export default function SignUpPage() {
 	return (

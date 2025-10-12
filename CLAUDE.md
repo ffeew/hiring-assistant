@@ -82,7 +82,7 @@ This application features a comprehensive email system with AI-powered template 
 
 - `src/lib/db/schema.ts` - Job post table with comprehensive fields (title, description, requirements, etc.)
 - `src/app/api/job-posts/` - Complete CRUD API routes for job advertisements
-- `src/app/components/job-posts/` - Job post management UI with React Hook Form validation
+- `src/app/job-posts/components/` - Job post management UI with React Hook Form validation
 - Integration with email workflow for position selection
 - Support for job post status management (active/inactive)
 
@@ -201,20 +201,45 @@ async function createExample(request: AuthenticatedRequest) {
 - Optimistic updates and automatic error handling with rollback
 - Background refetching and request deduplication
 
-**Query Hook Organization (Refactored Architecture)**
+**Component & Hook Organization (LCA Pattern)**
 
-This application follows the **"Lowest Common Ancestor"** principle for organizing query hooks:
+This application follows the **"Lowest Common Ancestor" (LCA)** principle for organizing both components and hooks:
 
-- **Feature-Specific Queries**: Create `queries/` and `mutations/` subdirectories within feature folders
-- **Shared Queries**: Place in the feature folder that owns the resource (e.g., `job-posts/queries/`)
-- **Co-location**: Hooks live closest to where they are used, moving up the tree only when shared
+- **Feature-Specific Components**: Create `components/`, `queries/`, and `mutations/` subdirectories within feature folders
+- **Shared Resources**: Place in the feature folder that owns the resource (e.g., `job-posts/queries/`)
+- **Co-location**: Components and hooks live closest to where they are used, moving up the tree only when shared across multiple features
 
 **Directory Structure:**
 
 ```
 src/app/
+├── components/              # App-wide shared components only
+│   ├── layout/             # Dashboard layout, header, sidebar
+│   ├── shared/             # Truly shared utilities (3+ features)
+│   │   ├── loading-spinner.tsx
+│   │   ├── theme-toggle.tsx
+│   │   └── background-pattern.tsx
+│   ├── auth/               # Authentication components
+│   ├── landing/            # Landing page sections
+│   └── interview-assistant/  # Shared interview component
+├── home/                   # Resume processing feature
+│   ├── components/         # Feature-specific UI components
+│   │   ├── home-content.tsx
+│   │   ├── email-preview-modal.tsx
+│   │   ├── job-post-selector.tsx
+│   │   ├── results-table.tsx
+│   │   ├── file-upload-section.tsx
+│   │   └── feature-card.tsx
+│   ├── queries/
+│   │   └── use-resume-mutations.ts
+│   └── hooks/
+│       └── use-hiring-assistant.ts
 ├── job-posts/
-│   ├── queries/              # Shared by multiple features
+│   ├── components/         # Job post UI components
+│   │   ├── job-posts-content.tsx
+│   │   ├── job-post-card.tsx
+│   │   └── job-post-form.tsx
+│   ├── queries/
 │   │   ├── use-job-posts.ts
 │   │   └── use-job-post.ts
 │   └── mutations/
@@ -223,11 +248,16 @@ src/app/
 │       ├── use-delete-job-post.ts
 │       └── use-toggle-status.ts
 ├── profile/
+│   ├── components/
+│   │   └── profile-settings-modal.tsx
 │   ├── queries/
 │   │   └── use-profile.ts
 │   └── mutations/
 │       └── use-update-profile.ts
 ├── email-templates/
+│   ├── components/
+│   │   ├── email-template-editor.tsx
+│   │   └── email-template-preview.tsx
 │   ├── queries/
 │   │   ├── use-email-templates-query.ts
 │   │   ├── use-email-template.ts
@@ -238,26 +268,38 @@ src/app/
 │       ├── use-delete-template.ts
 │       ├── use-duplicate-template.ts
 │       └── use-generate-template.ts
+├── resumes/
+│   ├── components/
+│   │   └── resumes-content.tsx
+│   └── queries/
+│       └── use-resumes.ts
 ├── interview-assistant/
 │   ├── queries/
 │   │   ├── use-applicants.ts
 │   │   └── use-resume-files.ts
 │   └── mutations/
 │       └── use-generate-interview-questions.ts
-├── live-interview/
-│   ├── queries/
-│   │   ├── use-interview-session-query.ts
-│   │   └── use-conversation-turns-query.ts
-│   ├── mutations/
-│   │   └── use-session-mutations.ts
-│   └── hooks/
-│       └── use-speech-recognition.ts
-└── home/
+└── live-interview/
+    ├── components/
+    │   ├── live-interview-dashboard.tsx
+    │   ├── live-transcript.tsx
+    │   ├── question-suggestions.tsx
+    │   └── session-setup-modal.tsx
     ├── queries/
-    │   └── use-resume-mutations.ts
+    │   ├── use-interview-session-query.ts
+    │   └── use-conversation-turns-query.ts
+    ├── mutations/
+    │   └── use-session-mutations.ts
     └── hooks/
-        └── use-hiring-assistant.ts
+        └── use-speech-recognition.ts
 ```
+
+**Component Organization Principles:**
+
+1. **Single-Use Components**: Live in the feature's `components/` directory
+2. **Feature-Shared Components**: Stay within the feature folder
+3. **Multi-Feature Components**: Move to `/app/components/shared/` only when used by 3+ features
+4. **Layout Components**: Dashboard, header, sidebar in `/app/components/layout/`
 
 **Pattern**: Each query/mutation file exports a single hook with typed interfaces and an invalidation utility function
 
@@ -314,7 +356,7 @@ The profile management system provides comprehensive user account settings with 
 
 - **Profile Page** (`/app/profile/page.tsx`) - Main profile management interface with dashboard layout
 - **Profile Content** (`/app/profile/profile-page-content.tsx`) - Comprehensive profile display and management
-- **Profile Settings Modal** (`/app/components/profile-settings-modal.tsx`) - Modal for editing profile details
+- **Profile Settings Modal** (`/app/profile/components/profile-settings-modal.tsx`) - Modal for editing profile details
 - **API Integration** - Uses `useProfileQuery()` and `useUpdateProfileMutation()` for data management
 
 **Features:**
@@ -434,6 +476,36 @@ const metadata = safeParseJSONObject(
 - Never duplicate type definitions
 - JSON field types validated with Zod schemas on parse operations
 
+### Component Organization Rules (ENFORCED STANDARDS)
+
+**File Organization Following LCA Principle:**
+
+1. **Feature Components**: All feature-specific UI components live in `[feature]/components/`
+   - Example: `home/components/home-content.tsx`, `job-posts/components/job-post-card.tsx`
+2. **Shared Components**: Only move to `/app/components/shared/` when used by 3+ features
+   - Examples: `loading-spinner.tsx`, `theme-toggle.tsx`, `background-pattern.tsx`
+3. **Layout Components**: Dashboard-wide components in `/app/components/layout/`
+   - Examples: `dashboard-layout.tsx`, `dashboard-header.tsx`, `sidebar/`
+4. **Naming Convention**:
+   - Main page components: `[feature]-content.tsx` (e.g., `home-content.tsx`, `job-posts-content.tsx`)
+   - Feature components: Descriptive names (e.g., `email-preview-modal.tsx`, `job-post-card.tsx`)
+5. **Import Paths**: Always use absolute imports with `@/app/` prefix for components
+
+**Component Naming Examples:**
+
+```
+✅ CORRECT:
+- home/components/home-content.tsx
+- home/components/email-preview-modal.tsx
+- job-posts/components/job-posts-content.tsx
+- job-posts/components/job-post-card.tsx
+
+❌ INCORRECT:
+- components/home/home-page.tsx  (should be in feature folder)
+- components/email-preview-modal.tsx  (should be in home/ - only used there)
+- job-posts/job-posts-page.tsx  (should be in job-posts/components/)
+```
+
 ### Query Development Rules (ENFORCED STANDARDS)
 
 **File Organization:**
@@ -442,6 +514,7 @@ const metadata = safeParseJSONObject(
 2. **Single Source of Truth**: One query hook per resource, no duplicates
 3. **Separate Files**: Create individual files for queries (`queries/`) and mutations (`mutations/`)
 4. **Naming Convention**: Use descriptive names like `use-job-posts.ts`, `use-create-job-post.ts`
+5. **Co-location with Components**: Queries and components for the same feature live in the same feature directory
 
 **Query Hook Structure (MANDATORY PATTERN):**
 
@@ -548,6 +621,7 @@ function MyComponent() {
 - **Email**: Gmail SMTP with Nodemailer and template system
 - **File Storage**: Cloudflare R2 for resume file storage
 - **Validation**: Zod schemas for all data validation and type safety
+- **Design System**: Custom design tokens in `@/lib/design-tokens.ts` for consistent styling
 
 ## UI Component System (shadcn/ui)
 
@@ -727,7 +801,7 @@ function DataTable({ data }) {
 
 #### Loading States
 
-- Use the custom `LoadingSpinner` component for async operations
+- Use the custom `LoadingSpinner` component from `@/app/components/shared/loading-spinner` for async operations
 - Disable interactive elements during loading states
 - Provide clear loading text alongside spinners
 

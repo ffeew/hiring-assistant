@@ -1,8 +1,8 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { LoadingSpinner } from "./loading-spinner";
-import { SUPPORTED_FILE_TYPES } from "../types";
+import { LoadingSpinner } from "@/app/components/shared/loading-spinner";
+import { SUPPORTED_FILE_TYPES } from "@/app/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";

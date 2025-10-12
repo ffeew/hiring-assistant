@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { LoadingSpinner } from "./loading-spinner";
-import type { ExtractedData, EmailTemplateData } from "../types";
+import { LoadingSpinner } from "@/app/components/shared/loading-spinner";
+import type { ExtractedData, EmailTemplateData } from "@/app/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";

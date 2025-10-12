@@ -1,6 +1,6 @@
 import { LoginForm } from "@/app/components/auth/login-form";
-import { ThemeToggle } from "@/app/components/theme-toggle";
-import { BackgroundPattern } from "@/app/components/background-pattern";
+import { ThemeToggle } from "@/app/components/shared/theme-toggle";
+import { BackgroundPattern } from "@/app/components/shared/background-pattern";
 import Link from "next/link";
 
 export default function LoginPage() {

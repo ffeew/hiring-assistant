@@ -1,8 +1,8 @@
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { DashboardLayout } from "@/app/components/dashboard-layout";
-import { JobPostsPage } from "@/app/components/job-posts/job-posts-page";
+import { DashboardLayout } from "@/app/components/layout/dashboard-layout";
+import { JobPostsContent } from "./components/job-posts-content";
 
 export default async function JobPostsRoute() {
 	const session = await auth.api.getSession({
@@ -15,7 +15,7 @@ export default async function JobPostsRoute() {
 
 	return (
 		<DashboardLayout>
-			<JobPostsPage />
+			<JobPostsContent />
 		</DashboardLayout>
 	);
 }

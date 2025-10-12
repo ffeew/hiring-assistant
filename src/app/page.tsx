@@ -1,7 +1,7 @@
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
-import { DashboardLayout } from "./components/dashboard-layout";
-import { HomePage } from "./components/home-page";
+import { DashboardLayout } from "./components/layout/dashboard-layout";
+import { HomeContent } from "./home/components/home-content";
 import { LandingPage } from "./components/landing/landing-page";
 
 export default async function Home() {
@@ -17,7 +17,7 @@ export default async function Home() {
 	// Show dashboard for authenticated users
 	return (
 		<DashboardLayout>
-			<HomePage />
+			<HomeContent />
 		</DashboardLayout>
 	);
 }

@@ -1,7 +1,7 @@
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { DashboardLayout } from "@/app/components/dashboard-layout";
+import { DashboardLayout } from "@/app/components/layout/dashboard-layout";
 import { ResumesContent } from "./resumes-content";
 
 export default async function ResumesPage() {

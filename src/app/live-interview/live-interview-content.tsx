@@ -2,7 +2,7 @@
 
 import { Suspense } from 'react';
 import { LiveInterviewDashboard } from './components/live-interview-dashboard';
-import { LoadingSpinner } from '@/app/components/loading-spinner';
+import { LoadingSpinner } from '@/app/components/shared/loading-spinner';
 
 export function LiveInterviewContent() {
   return (

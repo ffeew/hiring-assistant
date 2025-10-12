@@ -1,6 +1,6 @@
 "use client";
 
-import { DashboardLayout } from "@/app/components/dashboard-layout";
+import { DashboardLayout } from "@/app/components/layout/dashboard-layout";
 import { ProfilePageContent } from "./profile-page-content";
 
 export default function ProfilePage() {

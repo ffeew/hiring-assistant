@@ -1,7 +1,7 @@
 "use client";
 
 import { InterviewAssistant } from "@/app/components/interview-assistant/interview-assistant";
-import { LoadingSpinner } from "@/app/components/loading-spinner";
+import { LoadingSpinner } from "@/app/components/shared/loading-spinner";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
 import { useApplicants } from "./queries/use-applicants";

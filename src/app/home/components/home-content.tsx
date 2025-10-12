@@ -4,11 +4,11 @@ import { FileUploadSection } from "./file-upload-section";
 import { ResultsTable } from "./results-table";
 import { EmailPreviewModal } from "./email-preview-modal";
 import { JobPostSelector } from "./job-post-selector";
-import { FeatureCard } from "./ui/feature-card";
-import { useHiringAssistant } from "../home/hooks/use-hiring-assistant";
+import { FeatureCard } from "./feature-card";
+import { useHiringAssistant } from "../hooks/use-hiring-assistant";
 import { Video, BrainCircuit, Zap } from "lucide-react";
 
-export function HomePage() {
+export function HomeContent() {
 	const {
 		files,
 		extractedData,

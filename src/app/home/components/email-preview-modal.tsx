@@ -1,6 +1,6 @@
 "use client";
 
-import { LoadingSpinner } from "./loading-spinner";
+import { LoadingSpinner } from "@/app/components/shared/loading-spinner";
 import type { EmailPreviewResponse } from "@/lib/api-client";
 import {
 	Dialog,

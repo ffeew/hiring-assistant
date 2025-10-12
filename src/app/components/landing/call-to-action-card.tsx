@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, LucideIcon } from "lucide-react";
-import { cardVariants, iconSizes, spacing, typography } from "./design-tokens";
+import { cardVariants, iconSizes, spacing, typography } from "@/lib/design-tokens";
 
 interface CallToActionCardProps {
   title: string;
