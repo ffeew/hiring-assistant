@@ -1,20 +1,14 @@
 import { z } from 'zod';
 
-// ============================================================================
-// CORE TYPES & ENUMS
-// ============================================================================
 
 // ExtractedData is now an alias for ExtractionResponseData for backward compatibility
 export type { ExtractionResponseData as ExtractedData } from '@/app/api/extract/extract.validator';
 
-// ============================================================================
+// ===========================================================================
 // CONSTANTS (Used across multiple modules)
 // ============================================================================
 
 export const APPLICANT_STATUS = ['applied', 'screening', 'interview', 'offer', 'rejected', 'hired'] as const;
-export const EXTRACTION_STATUS = ['pending', 'success', 'failed'] as const;
-export const EMAIL_TYPE = ['acknowledgment', 'screening', 'interview', 'offer', 'rejection'] as const;
-export const EMAIL_STATUS = ['sent', 'failed', 'bounced'] as const;
 export const EMPLOYMENT_TYPES = ['full-time', 'part-time', 'contract', 'internship'] as const;
 export const EXPERIENCE_LEVELS = ['entry', 'mid', 'senior'] as const;
 export const SUPPORTED_FILE_TYPES = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'] as const;
@@ -29,8 +23,8 @@ export type { CreateJobPostBody as CreateJobPostData, UpdateJobPostBody as Updat
 export type { UpdateProfileBody as ProfileUpdateData } from '@/app/api/profile/profile.validator';
 export type { SendEmailsBody as EmailRequestData, EmailPreviewBody as EmailPreviewRequestData } from '@/app/api/email/email.validator';
 export type { MistralExtractionData, ResumeExtractionData, ExtractionResponseData, SuccessfulExtractionData } from '@/app/api/extract/extract.validator';
-export type { 
-  CreateEmailTemplateBody as CreateEmailTemplateData, 
+export type {
+  CreateEmailTemplateBody as CreateEmailTemplateData,
   UpdateEmailTemplateBody as UpdateEmailTemplateData,
   EmailTemplateResponse as EmailTemplateData,
   TemplateVariable,
