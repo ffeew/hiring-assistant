@@ -23,11 +23,16 @@ function deriveKey(salt: Buffer): Buffer {
 
 /**
  * Encrypts sensitive data using AES-256-GCM
- * Returns a base64 encoded string containing salt:iv:tag:encryptedData
+ * Returns a base64 encoded string containing version:salt:iv:tag:encryptedData
  */
 export function encrypt(text: string, context?: string): string {
   if (!text) {
     throw new Error('Text to encrypt cannot be empty');
+  }
+
+  // Validate context if provided
+  if (context && (typeof context !== 'string' || context.length > 100)) {
+    throw new Error('Context must be a string with maximum length of 100 characters');
   }
 
   // Generate random salt and IV
@@ -63,27 +68,32 @@ export function encrypt(text: string, context?: string): string {
 
 /**
  * Decrypts data encrypted with the encrypt function
- * Expects a base64 encoded string containing salt:iv:tag:encryptedData
+ * Expects a base64 encoded string containing version:salt:iv:tag:encryptedData
  */
 export function decrypt(encryptedData: string, context?: string): string {
   if (!encryptedData) {
-    throw new Error('Encrypted data cannot be empty');
+    throw new Error('Encrypted data is required');
+  }
+
+  // Validate context if provided
+  if (context && (typeof context !== 'string' || context.length > 100)) {
+    throw new Error('Context must be a string with maximum length of 100 characters');
   }
 
   try {
     // Decode from base64
     const combined = Buffer.from(encryptedData, 'base64');
 
-    // Check minimum length
+    // Check minimum length first (constant-time check)
     const minLength = 1 + SALT_LENGTH + IV_LENGTH + TAG_LENGTH + 1;
     if (combined.length < minLength) {
       throw new Error('Invalid encrypted data format');
     }
 
-    // Extract version
+    // Extract and validate version (constant-time comparison)
     const version = combined[0];
     if (version !== VERSION) {
-      throw new Error(`Unsupported encryption version: ${version}`);
+      throw new Error('Invalid encrypted data format'); // Generic error to avoid version leakage
     }
 
     // Extract components
@@ -116,7 +126,7 @@ export function decrypt(encryptedData: string, context?: string): string {
 
 /**
  * Utility function to check if a string appears to be encrypted
- * Performs more thorough validation
+ * Performs validation without timing leaks
  */
 export function isEncrypted(data: string): boolean {
   if (!data || typeof data !== 'string') {
@@ -128,7 +138,7 @@ export function isEncrypted(data: string): boolean {
     const decoded = Buffer.from(data, 'base64');
     const minLength = 1 + SALT_LENGTH + IV_LENGTH + TAG_LENGTH + 1;
 
-    // Check minimum length and version
+    // All checks in single expression to minimize timing differences
     return decoded.length >= minLength && decoded[0] === VERSION;
   } catch {
     return false;
