@@ -4,9 +4,9 @@ import { InterviewAssistant } from "@/app/components/interview-assistant/intervi
 import { LoadingSpinner } from "@/app/components/loading-spinner";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
-import { useApplicants } from "./query/use-applicants";
+import { useApplicants } from "./queries/use-applicants";
 import { useJobPosts } from "../job-posts/queries/use-job-posts";
-import { useResumeFiles } from "./query/use-resume-files";
+import { useResumeFiles } from "./queries/use-resume-files";
 
 export function InterviewAssistantContent() {
 	const {

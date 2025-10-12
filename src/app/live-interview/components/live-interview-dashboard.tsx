@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
 	Card,
 	CardContent,
@@ -24,9 +24,9 @@ import {
 	useAddTurn,
 	useGenerateQuestions,
 } from "@/app/live-interview/mutations/use-session-mutations";
-import { useApplicants } from "@/app/interview-assistant/query/use-applicants";
+import { useApplicants } from "@/app/interview-assistant/queries/use-applicants";
 import { useJobPosts } from "@/app/job-posts/queries/use-job-posts";
-import { useResumeFiles } from "@/app/interview-assistant/query/use-resume-files";
+import { useResumeFiles } from "@/app/interview-assistant/queries/use-resume-files";
 
 import { SessionSetupModal } from "./session-setup-modal";
 import { LiveTranscript } from "./live-transcript";
@@ -40,7 +40,8 @@ export function LiveInterviewDashboard() {
 		"interviewer" | "candidate"
 	>("candidate");
 	const [lastSpeechTime, setLastSpeechTime] = useState<number>(0);
-	const [accumulatedTranscript, setAccumulatedTranscript] = useState<string>("");
+	const [accumulatedTranscript, setAccumulatedTranscript] =
+		useState<string>("");
 	const [lastInterimTime, setLastInterimTime] = useState<number>(0);
 
 	// Data fetching
@@ -81,68 +82,6 @@ export function LiveInterviewDashboard() {
 	const addTurnError = addTurnMutation.error;
 	const generateQuestionsError = generateQuestionsMutation.error;
 
-	// Action functions
-	const createSession = async (data: CreateSessionData) => {
-		const result = await createSessionMutation.mutateAsync(data);
-		setCurrentSessionId(result.id);
-		return result;
-	};
-
-	const startSession = (sessionId: string) =>
-		startSessionMutation.mutateAsync(sessionId);
-	const endSession = (sessionId: string) =>
-		endSessionMutation.mutateAsync(sessionId);
-	const addConversationTurn = (turnData: {
-		speaker: "interviewer" | "candidate";
-		content: string;
-		confidence?: number;
-	}) => {
-		if (!currentSessionId) return;
-		return addTurnMutation.mutateAsync({
-			sessionId: currentSessionId,
-			turnData,
-		});
-	};
-	const generateDynamicQuestions = (params: {
-		conversationContext: string;
-		questionCount?: number;
-		lastFewTurns?: number;
-	}) => {
-		if (!currentSessionId) return;
-		return generateQuestionsMutation.mutateAsync({
-			sessionId: currentSessionId,
-			...params,
-		});
-	};
-
-	// Helper function to save accumulated transcript as a conversation turn
-	const saveAccumulatedTranscript = (speaker: "interviewer" | "candidate") => {
-		if (!accumulatedTranscript.trim() || !currentSessionId) return;
-
-		addConversationTurn({
-			speaker,
-			content: accumulatedTranscript.trim(),
-			confidence: Math.round(confidence),
-		});
-
-		// Auto-generate questions after candidate responses
-		if (speaker === "candidate" && conversationTurns.length > 0) {
-			const recentContext = conversationTurns
-				.slice(-3)
-				.map((turn) => `${turn.speaker}: ${turn.content}`)
-				.join("\n");
-
-			generateDynamicQuestions({
-				conversationContext: recentContext + `\ncandidate: ${accumulatedTranscript}`,
-				questionCount: 3,
-				lastFewTurns: 5,
-			});
-		}
-
-		// Clear accumulated transcript after saving
-		setAccumulatedTranscript("");
-	};
-
 	// Speech recognition
 	const {
 		interimTranscript,
@@ -158,6 +97,87 @@ export function LiveInterviewDashboard() {
 		onResult: handleSpeechResult,
 		onEnd: handleSpeechEnd,
 	});
+
+	// Action functions
+	const createSession = async (data: CreateSessionData) => {
+		const result = await createSessionMutation.mutateAsync(data);
+		setCurrentSessionId(result.id);
+		return result;
+	};
+
+	const startSession = (sessionId: string) =>
+		startSessionMutation.mutateAsync(sessionId);
+	const endSession = (sessionId: string) =>
+		endSessionMutation.mutateAsync(sessionId);
+
+	const addConversationTurn = useCallback(
+		(turnData: {
+			speaker: "interviewer" | "candidate";
+			content: string;
+			confidence?: number;
+		}) => {
+			if (!currentSessionId) return;
+			return addTurnMutation.mutateAsync({
+				sessionId: currentSessionId,
+				turnData,
+			});
+		},
+		[addTurnMutation, currentSessionId]
+	);
+
+	const generateDynamicQuestions = useCallback(
+		(params: {
+			conversationContext: string;
+			questionCount?: number;
+			lastFewTurns?: number;
+		}) => {
+			if (!currentSessionId) return;
+			return generateQuestionsMutation.mutateAsync({
+				sessionId: currentSessionId,
+				...params,
+			});
+		},
+		[currentSessionId, generateQuestionsMutation]
+	);
+
+	// Helper function to save accumulated transcript as a conversation turn
+	const saveAccumulatedTranscript = useCallback(
+		(speaker: "interviewer" | "candidate") => {
+			if (!accumulatedTranscript.trim() || !currentSessionId) return;
+
+			addConversationTurn({
+				speaker,
+				content: accumulatedTranscript.trim(),
+				confidence: Math.round(confidence),
+			});
+
+			// Auto-generate questions after candidate responses
+			if (speaker === "candidate" && conversationTurns.length > 0) {
+				const recentContext = conversationTurns
+					.slice(-3)
+					.map((turn) => `${turn.speaker}: ${turn.content}`)
+					.join("\n");
+
+				generateDynamicQuestions({
+					conversationContext:
+						recentContext + `\ncandidate: ${accumulatedTranscript}`,
+					questionCount: 3,
+					lastFewTurns: 5,
+				});
+			}
+
+			// Clear accumulated transcript after saving
+			setAccumulatedTranscript("");
+		},
+		[
+			accumulatedTranscript,
+			confidence,
+			addConversationTurn,
+			currentSessionId,
+			conversationTurns,
+			generateDynamicQuestions,
+		]
+	);
 
 	// Handle speech recognition results
 	function handleSpeechResult(
@@ -208,7 +228,12 @@ export function LiveInterviewDashboard() {
 
 	// Auto-save transcript after 3 seconds of complete silence
 	useEffect(() => {
-		if (!session || session.status !== "in_progress" || !accumulatedTranscript.trim() || !lastSpeechTime) {
+		if (
+			!session ||
+			session.status !== "in_progress" ||
+			!accumulatedTranscript.trim() ||
+			!lastSpeechTime
+		) {
 			return;
 		}
 
@@ -235,7 +260,14 @@ export function LiveInterviewDashboard() {
 		}, 3100); // Check slightly after 3 seconds to ensure we meet the threshold
 
 		return () => clearTimeout(timeoutId);
-	}, [session, accumulatedTranscript, lastSpeechTime, lastInterimTime, currentSpeaker, saveAccumulatedTranscript]);
+	}, [
+		session,
+		accumulatedTranscript,
+		lastSpeechTime,
+		lastInterimTime,
+		currentSpeaker,
+		saveAccumulatedTranscript,
+	]);
 
 	// Start new interview session
 	const handleStartNewSession = async (sessionData: CreateSessionData) => {

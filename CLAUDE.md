@@ -38,37 +38,45 @@ This is a **Next.js 15 hiring assistant application** that automates resume proc
 - Type-safe JSON handling for metadata parsing with `@/lib/json-utils.ts`
 - Duplicate detection via file hashing with R2 storage integration
 
-**Email Communication System**
+**Email Communication & Template System**
 
-- `src/app/api/email/email.service.ts` - Nodemailer integration with Gmail SMTP, fully integrated with dynamic template system
-- **Dynamic Template System**: All emails use user-created database templates with AI-powered generation
-- **Default Template Selection**: `src/app/api/extract/template-selection.service.ts` uses default template or first available template
-- **Simple Template Assignment**: Templates are selected based on database defaults (isDefault: true) with first-template fallback
-- **Enhanced Template Variables**: 15+ dynamic variables from Mistral OCR extraction (skills, experience, education, links)
+This application features a comprehensive email system with AI-powered template generation and intelligent template selection:
+
+**Core Email Infrastructure**:
+
+- `src/app/api/email/email.service.ts` - Nodemailer integration with Gmail SMTP
 - **Optional Configuration**: Users can sign up without Gmail setup, configure later in profile
 - **Validation Methods**: `EmailService.hasCompleteConfiguration()` and `EmailService.validateConfiguration()`
-- **Enhanced Error Messages**: Clear guidance on missing configuration with actionable next steps
-- **Template Requirement Validation**: System guides users to create templates before processing resumes
+- **Rate Limiting**: 1-second delay between emails to avoid Gmail throttling
 - Company branding support via user profile settings
-- Bulk email sending with 1-second rate limiting to avoid Gmail throttling
 - Email preview functionality before sending
 
-**AI-Powered Email Template System**
+**AI-Powered Template Management**:
 
-- `src/app/api/email-templates/` - Complete CRUD operations for email templates following 3-layer architecture
-- `src/app/api/email-templates/generate/` - AI template generation endpoint using Groq AI (GPT OSS 120B)
-- `src/lib/db/schema.ts` - EmailTemplate table with comprehensive fields (name, category, subject, content, variables, etc.)
-- **Template Management**: Full lifecycle management with create, read, update, delete, duplicate operations
-- **AI Generation Service**: `TemplateGenerationService` for natural language to professional email template conversion
-- **Category-Aware Generation**: Context-specific templates for acknowledgment, screening, interview, offer, rejection, follow_up
-- **Multiple Tone Support**: Professional, friendly, formal, and casual writing styles
-- **Variable Integration**: Automatic inclusion of dynamic variables like {{firstName}}, {{jobPosition}}, {{companyName}}
+- `src/app/api/email-templates/` - Complete CRUD operations following 3-layer architecture
+- `src/app/api/email-templates/generate/` - AI template generation using Groq AI (GPT OSS 120B)
+- `src/lib/db/schema.ts` - EmailTemplate table with comprehensive fields
+- **AI Generation**: Natural language to professional email template conversion
+- **Category-Aware**: Templates for acknowledgment, screening, interview, offer, rejection, follow_up
+- **Multiple Tones**: Professional, friendly, formal, and casual writing styles
 - **Template Editor**: Rich editing interface with live preview and click-to-insert variables
-- **Template Variables**: Predefined variable system with descriptions and validation, enhanced with Mistral OCR data
 - **Usage Tracking**: Template usage statistics and last updated timestamps
-- **Default Template System**: Mark templates as defaults for quick selection
-- **Template Engine Integration**: `src/lib/template-engine.ts` with 15+ template variables for personalized emails
-- **Candidate-Template Matching**: Intelligent template selection during resume processing based on candidate profiles
+
+**Dynamic Template Variables** (15+ variables from Mistral OCR extraction):
+
+- `src/lib/template-engine.ts` - Template rendering engine
+- **Candidate Data**: firstName, lastName, email, phone, jobPosition, companyName
+- **Professional Links**: linkedinUrl, githubUrl, portfolioUrl
+- **Resume Data**: skills (arrays), experience (formatted), education (formatted)
+- **Automatic Variable Integration**: All variables available in template editor
+
+**Intelligent Template Selection**:
+
+- `src/app/api/extract/template-selection.service.ts` - Auto-assigns templates during resume processing
+- **Default Priority**: Uses template marked with `isDefault: true` for category
+- **First Template Fallback**: Automatically uses first available template when no default exists
+- **Template Validation**: Frontend validates all extractions have templates before sending emails
+- **User Guidance**: Clear warnings and actionable guidance when templates are missing
 
 **Job Posts Management System**
 
@@ -118,7 +126,9 @@ src/app/api/example/
 └── route.ts               # HTTP controller
 ```
 
-**Controller Pattern (ENFORCED STANDARD):**
+**Controller Pattern with Standardized Error Handling (ENFORCED STANDARD):**
+
+All controllers must follow this error handling pattern with consistent response format:
 
 ```typescript
 async function createExample(request: AuthenticatedRequest) {
@@ -143,28 +153,38 @@ async function createExample(request: AuthenticatedRequest) {
 		}
 
 		// Business logic errors
-		if (error instanceof Error && error.message.includes('specific-condition')) {
+		if (
+			error instanceof Error &&
+			error.message.includes("specific-condition")
+		) {
 			return NextResponse.json(
-				{ 
-					error: 'Business logic error',
-					details: [{ field: 'fieldName', message: error.message }]
+				{
+					error: "Business logic error",
+					details: [{ field: "fieldName", message: error.message }],
 				},
 				{ status: 400 }
 			);
 		}
 
 		// Generic server errors
-		console.error('Error in createExample:', error);
+		console.error("Error in createExample:", error);
 		return NextResponse.json(
-			{ 
-				error: 'Internal server error',
-				details: [{ field: 'server', message: 'Failed to create example' }]
+			{
+				error: "Internal server error",
+				details: [{ field: "server", message: "Failed to create example" }],
 			},
 			{ status: 500 }
 		);
 	}
 }
 ```
+
+**Error Handling Principles**:
+
+- **Consistent Format**: All errors return `{ error: string, details: Array<{ field: string, message: string }> }`
+- **Type-Safe Handling**: ZodError, SDKError, and business logic errors handled uniformly
+- **Graceful Failures**: Use Promise.allSettled for concurrent operations
+- **Field-Specific Errors**: Detailed information for better debugging and UX
 
 **Environment Configuration**
 
@@ -190,6 +210,7 @@ This application follows the **"Lowest Common Ancestor"** principle for organizi
 - **Co-location**: Hooks live closest to where they are used, moving up the tree only when shared
 
 **Directory Structure:**
+
 ```
 src/app/
 ├── job-posts/
@@ -218,7 +239,7 @@ src/app/
 │       ├── use-duplicate-template.ts
 │       └── use-generate-template.ts
 ├── interview-assistant/
-│   ├── query/                # LCA for interview features
+│   ├── queries/
 │   │   ├── use-applicants.ts
 │   │   └── use-resume-files.ts
 │   └── mutations/
@@ -257,13 +278,6 @@ src/app/
 - Automatic encryption/decryption in API layer with password masking in responses
 - `src/lib/crypto.ts` provides secure encryption utilities with authentication
 
-**Error Handling Strategy (ENFORCED STANDARD)**
-
-- **Consistent Error Format**: All API routes return `{ error: string, details: Array<{ field: string, message: string }> }`
-- **Type-Safe Error Handling**: ZodError, SDKError, and business logic errors handled uniformly
-- **Graceful Failure Handling**: Promise.allSettled for concurrent operations
-- **Field-Specific Errors**: Detailed error information for better debugging and user experience
-
 **AI Integration Architecture**
 
 - **Mistral AI**: OCR for resume parsing with structured output via Zod schemas
@@ -273,40 +287,24 @@ src/app/
 - **File Processing**: Supports PDF (base64) and DOCX (file upload) with type validation
 - **Structured Template Generation**: AI generates name, subject, and HTML content with proper variable integration
 
-**Template Selection & Integration Architecture**
-
-- **Simple Template Selection**: `src/app/api/extract/template-selection.service.ts` uses database default templates for consistent assignment
-- **Default Template Priority**: Uses template marked with `isDefault: true` from user's active templates
-- **First Template Fallback**: When no default template exists, automatically uses the first available template
-- **Category-Based Fallback**: Falls back to category-specific defaults (screening, acknowledgment) when no templates available
-- **Enhanced Template Engine**: `src/lib/template-engine.ts` with 15+ template variables from Mistral OCR data
-- **Template Variables**: Professional links (LinkedIn, GitHub, portfolio), skills arrays, experience metrics, education formatting
-- **User Experience Integration**: Visual template validation with helpful guidance when templates missing
-- **Frontend Integration**: Real-time template validation in `use-hiring-assistant.ts` with error handling and user guidance
-
 ### API Routes Structure
 
-All API routes follow the validator/service/controller pattern:
+All API routes follow the 3-layer validator/service/controller pattern:
 
-- `/api/applicants` - Applicant management (GET, POST) with `applicants.validator.ts` & `applicants.service.ts`
-- `/api/applicants/[id]` - Individual applicant operations (GET, PUT, DELETE)
-- `/api/job-posts` - Job posts CRUD operations (GET, POST) with `job-posts.validator.ts` & `job-posts.service.ts`
-- `/api/job-posts/[id]` - Individual job post operations (GET, PUT, DELETE)
-- `/api/resumes` - Resume file management (GET, POST) with `resumes.validator.ts` & `resumes.service.ts`
-- `/api/resumes/[id]` - Individual resume file operations (GET, PUT, DELETE)
-- `/api/profile` - User profile management (GET, PATCH) with `profile.validator.ts` & `profile.service.ts`
-  - Handles optional Gmail configuration during signup and profile updates
-  - Supports clearing email configuration (both fields must be provided or both must be empty)
-  - Encrypts Gmail app passwords using AES-256-GCM before storage
-- `/api/email` - Bulk email sending with `email.validator.ts` & `email.service.ts` (fully integrated with template system)
-- `/api/email/preview` - Email template preview generation with dynamic template rendering
-- `/api/email-templates` - Email template management (GET, POST) with `email-templates.validator.ts` & `email-templates.service.ts`
-- `/api/email-templates/[id]` - Individual template operations (GET, PUT, DELETE)
-- `/api/email-templates/[id]/preview` - Template preview with sample data
-- `/api/email-templates/[id]/duplicate` - Template duplication functionality
-- `/api/email-templates/generate` - AI-powered template generation using natural language prompts
-- `/api/extract` - Resume data extraction with authentication, intelligent template selection, and enhanced candidate data integration
-- `/api/auth/[...all]` - Better Auth endpoints for login/signup
+**Core Resources**:
+
+- `/api/applicants` - Applicant management (CRUD)
+- `/api/job-posts` - Job post management (CRUD)
+- `/api/resumes` - Resume file management (CRUD)
+- `/api/profile` - User profile (GET, PATCH) with optional Gmail config and AES-256-GCM encryption
+- `/api/email` - Bulk email sending with template system integration
+- `/api/email/preview` - Email preview generation
+- `/api/email-templates` - Template CRUD operations
+- `/api/email-templates/[id]/duplicate` - Template duplication
+- `/api/email-templates/generate` - AI template generation
+- `/api/extract` - Resume OCR extraction with auto-template assignment
+- `/api/interview-sessions` - Interview session management (CRUD)
+- `/api/auth/[...all]` - Better Auth endpoints
 
 ### Profile Management System
 
@@ -342,15 +340,14 @@ When creating or modifying API routes, you MUST:
 
 1. **Follow the 3-layer pattern** - Always create validator, service, and controller layers
 2. **Reuse existing Zod schemas** - Check `src/app/types/index.ts` first before creating new schemas
-3. **Use standardized error handling** - Return `{ error, details }` format for all errors
+3. **Use standardized error handling** - Follow the controller pattern with consistent error format (see above)
 4. **Implement proper authentication** - Use `withAuth` or `withAuthParams` middleware
 5. **Include soft delete support** - Use `withNotDeleted` and `softDeleteData` from `@/lib/soft-delete`
 6. **Use transactions** - Wrap database operations in `withTransaction` when needed
 7. **Use type-safe JSON parsing** - Always use `@/lib/json-utils.ts` functions for JSON fields
 8. **Validate all inputs** - Use Zod schemas for comprehensive request validation
 9. **Handle concurrent operations** - Use Promise.allSettled for bulk operations
-10. **Maintain type safety** - Import types from validators, not from global types file
-11. **Verify type correctness** - Run `npm run typecheck` before committing changes
+10. **Verify type correctness** - Run `npm run typecheck` before committing changes
 
 ### File Naming Conventions
 
@@ -390,11 +387,13 @@ export class ExampleService {
 All JSON fields stored in the database MUST use type-safe parsing utilities from `@/lib/json-utils.ts`:
 
 **Available Functions:**
+
 - `safeParseJSON<T>()` - Parse with schema validation and fallback
 - `safeParseJSONArray<T>()` - Parse JSON arrays with item validation
 - `safeParseJSONObject<T>()` - Parse JSON objects with schema validation
 
 **Pre-defined Schemas:**
+
 - `requirementsSchema` - For job post requirements arrays
 - `responsibilitiesSchema` - For job post responsibilities arrays
 - `benefitsSchema` - For job post benefits arrays
@@ -402,114 +401,127 @@ All JSON fields stored in the database MUST use type-safe parsing utilities from
 - `experienceSchema` / `educationSchema` - For nested resume data
 
 **Usage Example:**
+
 ```typescript
-import { safeParseJSONArray, requirementsSchema } from '@/lib/json-utils';
+import { safeParseJSONArray, requirementsSchema } from "@/lib/json-utils";
 
 // Instead of: JSON.parse(jobPost.requirements) || []
-const requirements = safeParseJSONArray(jobPost.requirements, requirementsSchema);
+const requirements = safeParseJSONArray(
+	jobPost.requirements,
+	requirementsSchema
+);
 
-// Instead of: JSON.parse(applicant.metadata) || null  
-const metadata = safeParseJSONObject(applicant.metadata, applicantMetadataSchema);
+// Instead of: JSON.parse(applicant.metadata) || null
+const metadata = safeParseJSONObject(
+	applicant.metadata,
+	applicantMetadataSchema
+);
 ```
 
 **Benefits:**
+
 - ✅ Type safety with Zod validation
 - ✅ Graceful error handling with fallbacks
 - ✅ Consistent parsing across the application
 - ✅ Automatic logging of parsing failures
 
-### Type Management (ENFORCED STANDARD)
+### Type Management
 
-**Type Import Strategy:**
-- Import types from their source validators: `import type { CreateJobPostBody } from './job-posts.validator'`
+**Single Source of Truth**:
+
+- Import types from source validators: `import type { CreateJobPostBody } from './job-posts.validator'`
 - Global types in `@/app/types/index.ts` re-export validator types for frontend use
-- Never duplicate type definitions - always use single source of truth
-
-**Type Consolidation:**
-- `ExtractedData` is now an alias for `ExtractionResponseData` from extract validator
-- All API response types follow consistent patterns with optional fields
+- Never duplicate type definitions
 - JSON field types validated with Zod schemas on parse operations
 
 ### Query Development Rules (ENFORCED STANDARDS)
 
 **File Organization:**
+
 1. **Lowest Common Ancestor (LCA)**: Place queries at the lowest point in the tree where all consumers can access them
 2. **Single Source of Truth**: One query hook per resource, no duplicates
 3. **Separate Files**: Create individual files for queries (`queries/`) and mutations (`mutations/`)
 4. **Naming Convention**: Use descriptive names like `use-job-posts.ts`, `use-create-job-post.ts`
 
 **Query Hook Structure (MANDATORY PATTERN):**
+
 ```typescript
 // Each query file must follow this pattern (.ts files, no "use client" directive needed)
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 interface DataType {
-  id: string;
-  // ... other fields
+	id: string;
+	// ... other fields
 }
 
 async function fetchData(): Promise<DataType[]> {
-  const response = await fetch("/api/endpoint");
-  if (!response.ok) throw new Error("Failed to fetch data");
-  const result = await response.json();
-  return result.data;
+	const response = await fetch("/api/endpoint");
+	if (!response.ok) throw new Error("Failed to fetch data");
+	const result = await response.json();
+	return result.data;
 }
 
 export function useDataName() {
-  return useQuery({
-    queryKey: ["data-name"],
-    queryFn: fetchData,
-    staleTime: 0, // Customize as needed
-  });
+	return useQuery({
+		queryKey: ["data-name"],
+		queryFn: fetchData,
+		staleTime: 0, // Customize as needed
+	});
 }
 
 // Invalidation utility (REQUIRED)
 export function useInvalidateDataName() {
-  const queryClient = useQueryClient();
-  return () => queryClient.invalidateQueries({ queryKey: ["data-name"] });
+	const queryClient = useQueryClient();
+	return () => queryClient.invalidateQueries({ queryKey: ["data-name"] });
 }
 ```
 
 **Mutation Hook Structure (MANDATORY PATTERN):**
+
 ```typescript
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 export function useCreateItem() {
-  const queryClient = useQueryClient();
+	const queryClient = useQueryClient();
 
-  return useMutation({
-    mutationFn: (data: CreateItemData) => apiClient.createItem(data),
-    mutationKey: ['create-item'],
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['items'] });
-    },
-  });
+	return useMutation({
+		mutationFn: (data: CreateItemData) => apiClient.createItem(data),
+		mutationKey: ["create-item"],
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: ["items"] });
+		},
+	});
 }
 ```
 
 **Usage in Components:**
+
 ```typescript
 // Import queries and their invalidation utilities
-import { useJobPosts, useInvalidateJobPosts } from "@/app/job-posts/queries/use-job-posts";
+import {
+	useJobPosts,
+	useInvalidateJobPosts,
+} from "@/app/job-posts/queries/use-job-posts";
 import { useCreateJobPost } from "@/app/job-posts/mutations/use-create-job-post";
 
 function MyComponent() {
-  const { data: jobPosts, isLoading } = useJobPosts();
-  const createMutation = useCreateJobPost();
-  const invalidateJobs = useInvalidateJobPosts();
+	const { data: jobPosts, isLoading } = useJobPosts();
+	const createMutation = useCreateJobPost();
+	const invalidateJobs = useInvalidateJobPosts();
 
-  const handleRefresh = () => {
-    invalidateJobs(); // Manual invalidation if needed
-  };
+	const handleRefresh = () => {
+		invalidateJobs(); // Manual invalidation if needed
+	};
 
-  // Mutations auto-invalidate on success
-  const handleCreate = () => {
-    createMutation.mutate(data);
-  };
+	// Mutations auto-invalidate on success
+	const handleCreate = () => {
+		createMutation.mutate(data);
+	};
 }
 ```
 
 **Query Configuration Rules:**
+
 - Use `staleTime: 0` for frequently changing data (resumes, real-time updates)
 - Use `staleTime: 60 * 1000` (1 minute) for relatively stable data (job posts, applicants)
 - Always handle loading and error states in components
@@ -517,6 +529,7 @@ function MyComponent() {
 - Include invalidation utilities in every query file
 
 **Breaking Down Large Hooks:**
+
 - Split monolithic hooks into focused, single-purpose hooks
 - Separate queries from mutations into different files
 - Extract business logic into smaller, composable hooks
@@ -771,125 +784,58 @@ npx shadcn@latest add [component-name]
 
 **CRITICAL: Avoid useEffect unless absolutely necessary.** Most use cases can be handled with event handlers, component state, or React Query.
 
-#### When NOT to use useEffect (Most Common Cases)
+#### When NOT to use useEffect
 
-1. **Event Handling**: Use onChange, onClick, onSubmit handlers instead
-   ```typescript
-   // ❌ WRONG - Don't use useEffect for event responses
-   useEffect(() => {
-     if (selectedJobPostId) {
-       queryClient.invalidateQueries({ queryKey: ["resume-files"] });
-     }
-   }, [selectedJobPostId, queryClient]);
+- **Event Handling**: Use onChange, onClick, onSubmit handlers
+- **Data Fetching**: Use TanStack Query (React Query)
+- **Form State**: Use React Hook Form with defaultValues
+- **Derived State**: Calculate during render with useMemo
 
-   // ✅ CORRECT - Use event handlers
-   <Select 
-     onValueChange={(value) => {
-       field.onChange(value);
-       queryClient.invalidateQueries({ queryKey: ["resume-files"] });
-     }}
-   />
-   ```
+```typescript
+// ❌ WRONG - useEffect for event responses
+useEffect(() => {
+	if (selectedId) queryClient.invalidateQueries({ queryKey: ["data"] });
+}, [selectedId]);
 
-2. **Data Fetching**: Use TanStack Query (React Query) instead
-   ```typescript
-   // ❌ WRONG - Don't use useEffect for data fetching
-   useEffect(() => {
-     fetchData().then(setData);
-   }, []);
+// ✅ CORRECT - Event handler
+<Select
+	onValueChange={(value) => {
+		field.onChange(value);
+		queryClient.invalidateQueries({ queryKey: ["data"] });
+	}}
+/>;
 
-   // ✅ CORRECT - Use React Query
-   const { data } = useQuery({
-     queryKey: ["data"],
-     queryFn: fetchData,
-   });
-   ```
+// ❌ WRONG - useEffect for data fetching
+useEffect(() => {
+	fetchData().then(setData);
+}, []);
 
-3. **Form State Updates**: Use form libraries like React Hook Form
-   ```typescript
-   // ❌ WRONG - Don't use useEffect for form state
-   useEffect(() => {
-     if (defaultValues) {
-       setFormData(defaultValues);
-     }
-   }, [defaultValues]);
-
-   // ✅ CORRECT - Use React Hook Form defaultValues
-   const form = useForm({
-     defaultValues: defaultValues,
-   });
-   ```
+// ✅ CORRECT - React Query
+const { data } = useQuery({ queryKey: ["data"], queryFn: fetchData });
+```
 
 #### When useEffect IS Appropriate (Rare Cases)
 
+Only use useEffect for:
+
 1. **Cleanup operations** (timers, subscriptions, event listeners)
 2. **Direct DOM manipulation** that can't be handled declaratively
-3. **Integration with third-party libraries** that require imperative setup
+3. **Third-party library integration** requiring imperative setup
 4. **Window/document event listeners** for global state
 
-#### Examples of Proper useEffect Usage
-
 ```typescript
-// ✅ CORRECT - Cleanup timers
+// ✅ Valid useEffect - Cleanup
 useEffect(() => {
-  const timer = setInterval(() => {
-    // polling logic
-  }, 5000);
-  
-  return () => clearInterval(timer);
-}, []);
-
-// ✅ CORRECT - Third-party library integration
-useEffect(() => {
-  const chart = new Chart(canvasRef.current, config);
-  return () => chart.destroy();
+	const timer = setInterval(() => {
+		/* polling */
+	}, 5000);
+	return () => clearInterval(timer);
 }, []);
 ```
 
-### Alternative Patterns
+**Enforcement Rules**:
 
-#### Event-Driven Updates
-Instead of useEffect, trigger actions in response to user events:
-
-```typescript
-// ✅ PREFERRED - Event handlers
-const handleJobPostChange = (jobPostId: string) => {
-  form.setValue('jobPostId', jobPostId);
-  queryClient.invalidateQueries({ queryKey: ["resumes"] });
-  resetForm();
-};
-```
-
-#### React Query for Server State
-Use React Query for all server state management:
-
-```typescript
-// ✅ PREFERRED - React Query with dependencies
-const { data: resumes } = useQuery({
-  queryKey: ["resumes", selectedJobPostId, selectedApplicantId],
-  queryFn: () => fetchResumes({ jobPostId: selectedJobPostId, applicantId: selectedApplicantId }),
-  enabled: !!selectedJobPostId && !!selectedApplicantId,
-});
-```
-
-#### Derived State
-Calculate derived state during render instead of useEffect:
-
-```typescript
-// ✅ PREFERRED - Computed during render
-const availableResumes = useMemo(() => 
-  resumeFiles.filter(resume => 
-    resume.applicantId === selectedApplicantId &&
-    resume.jobPostId === selectedJobPostId
-  ), [resumeFiles, selectedApplicantId, selectedJobPostId]
-);
-```
-
-### Enforcement Rules
-
-1. **Code Review**: Any useEffect must be justified in PR description
-2. **Alternatives First**: Always consider event handlers, React Query, or useMemo first
-3. **Cleanup Required**: All useEffect with side effects must include cleanup
-4. **Dependency Arrays**: Must be exhaustive and correct (use ESLint rules)
-
-Following these guidelines ensures predictable, maintainable, and performant React components.
+- Any useEffect must be justified in PR description
+- Always consider alternatives first (event handlers, React Query, useMemo)
+- All useEffect with side effects must include cleanup
+- Dependency arrays must be exhaustive and correct
